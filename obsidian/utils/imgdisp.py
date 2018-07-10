@@ -14,7 +14,10 @@ import math
 
 class ImgDisp():
   '''
-  ..autoclass:: ImgDisp
+  .. sbtrbg = Sbtr_bg(background)
+  processedData = sbtrbg.subtract(data)
+
+utoclass:: ImgDisp
   '''
   def __init__(self, collection, bgimage=None):
     '''

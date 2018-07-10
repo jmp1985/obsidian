@@ -23,7 +23,7 @@ class PowerSpect():
     n = self.trace.size
     coefs = np.fft.rfft(self.trace)
     freqs = np.fft.fftfreq(n)
-
+    # hello
     return np.stack((coefs, freqs))
 
   def display(self, spect):
