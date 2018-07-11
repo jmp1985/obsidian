@@ -1,6 +1,5 @@
 '''
 Image processing main class for testing and developing
-.. automodule:: imp_main
 .. moduleauthor:: Fiona Young
 '''
 import numpy as np
@@ -12,14 +11,19 @@ from obsidian.utils.imgdisp import ImgDisp
 import os.path
 from obsidian.fex.trace import Trace
 from obsidian.fex.powerSpect import PowerSpect
+from glob import glob
 
 def main():
   
-  data_dir = input("Enter directory path for images")
+  data_dir = input("Enter directory path for images: ")
   assert os.path.exists(data_dir), " not a real directory "
+
   # read in data files
-  coll = skio.ImageCollection(data_dir+'/*.png')
   
+  coll = skio.ImageCollection(data_dir+'/*')
+  #coll = [np.load(f) for f in glob(data_dir+'*')]
+  #print(type(coll), type(coll[1]))
+
   # (arbitrarily) choose background image
   background = coll[0]
   data = coll[1:]
@@ -40,7 +44,7 @@ def main():
   
   # extract mean trace from one image
   tr = Trace(processedData[3])
-  lines, profiles = tr.meanTrace((90, 0, 45, -30, 20, 70, 65, 10))
+  lines, profiles = tr.meanTrace((90, 0, 45, -30, 20, 70, -65, 10))
   fig3, ax3 = tr.display(lines, profiles)  
   
   # power spectrum of mean trace

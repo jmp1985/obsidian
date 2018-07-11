@@ -1,6 +1,5 @@
 '''
 First Obsidian class: remove background features from a powder diffraction image
-.. automodule:: sbtr_bg
 .. moduleauthor:: Fiona Young
 '''
 import numpy as np
@@ -9,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class Sbtr_bg():
   '''
-  .. autoclass:: Sbtr_bg
+  remove background features from a powder diffraction image
   '''
   
   def __init__(self, bgfile):

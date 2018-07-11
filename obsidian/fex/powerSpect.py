@@ -10,20 +10,19 @@ import matplotlib.pyplot as plt
 class PowerSpect():
   
   '''
-  .. autoclass:: PowerSpect
   '''
 
   def __init__(self, trace):
     self.trace = trace
-
+    self.n = trace.size
+  
   def spect(self):
     '''
     compute the intensity of spatial frequency components
     '''
-    n = self.trace.size
-    coefs = np.fft.rfft(self.trace)
-    freqs = np.fft.fftfreq(n)
-    # hello
+    coefs = np.fft.fft(self.trace)/self.n # normalised fft
+    freqs = np.fft.fftfreq(self.n)
+    
     return np.stack((coefs, freqs))
 
   def display(self, spect):
@@ -31,7 +30,7 @@ class PowerSpect():
     plot power spectrum
     '''
     fig, ax = plt.subplots()
-    ax.plot(spect[1], spect[0])
+    ax.plot(spect[1], np.abs(spect[0]))
 
     return fig, ax
 

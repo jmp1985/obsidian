@@ -1,6 +1,5 @@
 '''
 Tool for extracting and handling intensity profiles
-.. automodule:: trace
 .. moduleauthor:: Fiona Young
 '''
 
@@ -14,17 +13,26 @@ class Trace():
   Trace extraction and manipulation class
   .. autoclass:: Trace
   '''
-  def __init__(self, image):
+  def __init__(self, image, centre=None):
     '''
     :param image: inputfile as np array
+    :param centre: tuple, (row, col) pixel coordinates of beam centre. If not
+    provided image assumed to be square and centred
     initialises empty trace array
     '''
-    assert(image.shape[0]==image.shape[1]), "image must be square"
+
     self.img = image
     self.trace = []
     self.w = image.shape[1] # image width is number of columns
     self.h = image.shape[0] # image height is number of rows
-    self.cent = self.h/2
+    
+    if centre is None:
+      assert(image.shape[0]==image.shape[1]), "image must be square if centre coordinates not specified"
+      self.cent = (self.h/2, self.w/2)
+      self.rmax = self.cent[0]
+    else:
+      self.cent = centre
+      self.rmax = min(*self.cent, self.w-self.cent[1], self.h-self.cent[0])
 
   def line(self, angle):
     '''
@@ -34,10 +42,10 @@ class Trace():
     '''
     assert(angle > -90 and angle <= 90),  "angle must be in range (-90, 90]"
     
-    x0 = self.cent*math.cos(math.radians(angle))
-    y0 = self.cent*math.sin(math.radians(angle))
-    r0, c0 = self.cent+y0, self.cent-x0 # in pixel coordinates
-    r1, c1 = self.cent-y0, self.cent+x0 
+    x0 = self.rmax*math.cos(math.radians(angle))
+    y0 = self.rmax*math.sin(math.radians(angle))
+    r0, c0 = self.cent[0]+y0, self.cent[1]-x0 # in pixel coordinates
+    r1, c1 = self.cent[0]-y0, self.cent[1]+x0 
 
     num = 1000
     r, c = np.linspace(r0, r1, num), np.linspace(c0, c1, num)
