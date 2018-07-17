@@ -13,26 +13,28 @@ class Trace():
   Trace extraction and manipulation class
   .. autoclass:: Trace
   '''
-  def __init__(self, image, centre=None):
+  def __init__(self, image_shape, angles, centre=None, rmax=None):
     '''
     :param image: inputfile as np array
     :param centre: tuple, (row, col) pixel coordinates of beam centre. If not
     provided image assumed to be square and centred
     initialises empty trace array
     '''
-
-    self.img = image
-    self.trace = []
-    self.w = image.shape[1] # image width is number of columns
-    self.h = image.shape[0] # image height is number of rows
+    self.w = image_shape[1] # image width is number of columns
+    self.h = image_shape[0] # image height is number of rows
     
     if centre is None:
-      assert(image.shape[0]==image.shape[1]), "image must be square if centre coordinates not specified"
+      assert(image_shape[0]==image_shape[1]), "image must be square if centre coordinates not specified"
       self.cent = (self.h/2, self.w/2)
-      self.rmax = self.cent[0]
     else:
       self.cent = centre
+      
+    if rmax is None:
       self.rmax = min(*self.cent, self.w-self.cent[1], self.h-self.cent[0])
+    else:
+      self.rmax = rmax
+    
+    self.lines = [ self.line(angle) for angle in angles ]
 
   def line(self, angle):
     '''
@@ -47,64 +49,59 @@ class Trace():
     r0, c0 = self.cent[0]+y0, self.cent[1]-x0 # in pixel coordinates
     r1, c1 = self.cent[0]-y0, self.cent[1]+x0 
 
-    num = 1000
+    num = self.w 
     r, c = np.linspace(r0, r1, num), np.linspace(c0, c1, num)
     # return line coordinates 
     return np.vstack((r, c))
 
-  def readTrace(self, angle):
+  def readTrace(self, line, img):
     ''' 
     extract a single line trace through an image
     :param line: line coordinates as 2d np array
     :returns: line coordinates and image values along line
     '''
-    # get line coordinates
-    line = self.line(angle)
     # extract image values along line using bilinear interpolation
-    vals = map_coordinates(self.img, line, order=1)
-    return [line], vals
+    vals = map_coordinates(img, line, order=3)
+    return vals
   
-  def meanTrace(self, angles):
+  def meanTrace(self, img):
     '''
     calculate the mean image profile across specified angles
     :param angles: list of angles to be averaged across
     :returns: traced lines and mean trace values 
     '''
-    nAng = len(angles)
-    lines = []
-    profiles = []
+    traces = []
     
-    for angle in angles:
-      line, vals = self.readTrace(angle)
-      lines.append(line)
-      profiles.append(vals)
+    for line in self.lines:
+      traces.append(self.readTrace(line, img))
     
-    meanVals = np.mean(profiles, axis = 0)
-    profiles.append(meanVals)
+    meanVals = np.mean(traces, axis = 0)
     
-    return lines, profiles
+    return traces, meanVals
 
-  def display(self, lines, traceVals):
+  def display(self, img, traces, meanVals):
     '''
     display image with line overlaid and resulting trace plot
     '''
     # set up figure gridspace and axes
     fig = plt.figure()
-    gs = GridSpec(len(traceVals),2)
-    axes = [plt.subplot(gs[:,0])]+[plt.subplot(gs[i,1]) for i in
-            range(len(traceVals))]
+    gs = GridSpec(len(traces),2)
+    axes = [plt.subplot(gs[0:-4,0]),
+    plt.subplot(gs[-4:,0])]+[plt.subplot(gs[i,1]) for i in range(len(traces))]
     
     # show figure in first axis
-    axes[0].imshow(self.img, cmap='gray', interpolation='nearest')
+    axes[0].imshow(img, cmap='binary', interpolation='nearest', vmin=-1, vmax=300)
     
     # overlay figure with lines indicating profiles
-    for line in lines:
+    for line in self.lines:
+      print(line)
       axes[0].plot(line[0][1], line[0][0], 'r')
     
-    # plot profile values
-    for i in range(len(traceVals)):
-      axes[i+1].plot(traceVals[i])
+    # plot mean trace below figure
+    axes[1].plot(meanVals)
+
+    # plot trace values
+    for i in range(len(traces)):
+      axes[i+2].plot(traces[i])
     
     return fig, axes
-
-
