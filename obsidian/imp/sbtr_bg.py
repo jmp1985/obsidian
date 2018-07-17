@@ -20,13 +20,12 @@ class Sbtr_bg():
   def subtract(self, filelist):
     '''
     Subtract the background file from all data files
-    :param filelist: collection of files to be modified
+    :param filelist: dict of files to be modified
     :returns: newfilelist modified files
     '''
-    newfilelist = []
-    
-    for f in filelist:
+        
+    for name, f in filelist.items():
       assert (f.shape == self.bgfile.shape), "Images must be equal size!"
-      newfilelist.append(np.subtract(f, self.bgfile))
+      filelist[name] = (np.subtract(f, self.bgfile))
     
-    return newfilelist
+    return filelist
