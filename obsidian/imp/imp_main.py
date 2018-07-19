@@ -13,7 +13,7 @@ from obsidian.fex.trace import Trace
 from obsidian.fex.powerSpect import PowerSpect
 from obsidian.fex.extractor import FeatureExtractor as Fex
 from glob import glob
-
+import pickle
 def fname(f):
   '''
   :param f: string, filepath
@@ -123,17 +123,19 @@ def main2():
   #   directories  #
   ##################
   
-  # image data directory
-  img_data_dir = input("Enter directory path for images: ")
-  if img_data_dir == '':
-    img_data_dir = 'data/realdata/npy_files/tray2/a5/grid'
+  # Image data directory
+  img_data_dir = (input("Enter directory path for images: 
+                        [default:
+                         data/realdata/npy_files/tray2/a5/grid]") 
+                  or 'data/realdata/npy_files/tray2/a5/grid')
   assert os.path.exists(img_data_dir), " not a real directory "
 
-  # background data directory
-  bg_data_dir = input("Enter directory path for background data: ")
-  if bg_data_dir == '':
-    bg_data_dir = 'data/realdata/npy_files/tray2/g1/grid'
-  assert os.path.exists(bg_data_dir), " not a real directory "
+  # Tray number
+  tray_nr = int(input("Enter tray number: "))
+  assert tray_nr is in (1, 2, 4, 5), "Available tray numbers are 1, 2, 4, 5"
+  
+  # Data batch id
+  ID = input("Enter a batch ID to help identify pickle files saved to obsidian/obsidian/datadump")
   
   ######################
   # read in data files #
@@ -141,8 +143,7 @@ def main2():
   
   print("Loading image data...") 
   
-  #coll = skio.ImageCollection(data_dir+'/*')
-  coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[50:60]}
+  coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
   
   names = list(coll.keys())
 
@@ -151,13 +152,8 @@ def main2():
   ############################
   
   print("Loading background data...")
-
-  #bg_data = [np.load(f) for f in glob(bg_data_dir+'/*.npy')]
-
-  # concatenate and average background data
-  #background = np.mean( np.dstack(bg_data), axis=2  )
   
-  background = np.load('obsidian/datadump/tray2_bg.npy')
+  background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
 
   ##################
   #   processing   #
@@ -165,17 +161,13 @@ def main2():
   
   print("Pre-prossessing images...")
 
-  # use subset of data
+  # Slice coll to use subset of data
   data = coll
   
   process = Processor(data, background)
 
   process.rm_artifacts(value=500)
   process.background()
-  
-  #print("Saving...")
-  #save
-  #process.dump_save()
   
   ######################
   #  feature analysis  #
@@ -185,21 +177,19 @@ def main2():
 
   fex = Fex(process.processedData)
 
-  fex.meanTraces(centre=(1319.36, 1249.42), rmax=500, nangles=20)
-  
-  print("Saving...")
-  fex.dump_save()
+  fex.meanTraces(centre=(1318.37, 1249.65), rmax=400, nangles=20)
 
   ####################
   #    saving        #
   ####################
-  '''
-  data_to_save = np.array([(name, process.processedData[name],
-  fex.profiles[name]) for  name in names ])
+  
+  #print("Saving...")
+  #process.dump_save(ID)
 
-  np.save('obsidian/datadump/a5data.npy', data_to_save, allow_pickle=False)
-  '''
+  print("Saving profiles to datadump/{}_profiles.pickle...".format(ID))
+  fex.dump_save(ID)
+
 if __name__ == '__main__':
-  main1()
-  #main2()
+  #main1()
+  main2()
 
