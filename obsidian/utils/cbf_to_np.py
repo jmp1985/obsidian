@@ -33,11 +33,11 @@ class Cbf2Np():
   def get_dirs(self):
     bottom_dirs = {} # empty directory dict
     for (dirName, subdirList, fileList) in os.walk(self.root, topdown=True):
+      #subdirList[:] = [d for d in subdirList if d != 'tray2']
       # collect bottom most directory names and files
       if len(subdirList)==0:
         bottom_dirs[dirName]=fileList
     return bottom_dirs
-  
 
   def cbf_to_npfile(self, cbf_filepath, npy_filename=None, header=False):
     '''
@@ -48,21 +48,22 @@ class Cbf2Np():
     :param npy_filename: str, output file name (optional)
     '''
     cbf_filedir, cbf_filename = os.path.split(cbf_filepath)
-
+        
     if npy_filename is None: # create new file with same name (but npy suffix)
       npy_filename = cbf_filename.replace('.cbf','.npy')
     
     npy_filedir = os.path.join(self.dest, os.path.relpath(cbf_filedir, self.root))
     #print(npy_filedir, cbf_filedir, npy_filename, cbf_filepath)
     npy_filepath = os.path.join(npy_filedir, npy_filename)
-    
+    print("Saving file {}...".format(npy_filepath))
+
     if not os.path.isdir(npy_filedir):
       os.makedirs(npy_filedir)
 
     image = load(cbf_filepath)
     data = image.get_raw_data().as_numpy_array()
     np.save(npy_filepath, data, allow_pickle=False)
-
+    
     if header:
       self.extract_header(cbf_filepath, npy_filedir)
   
@@ -82,7 +83,6 @@ class Cbf2Np():
           self.cbf_to_npfile(os.path.join(directory, cbf_file), header=header)
           header = False
 
-     
   def extract_header(self, cbf_filepath, npy_dir, bg=False):
     '''
     assume all headers the same for a directory of image files (i.e directory
@@ -110,10 +110,10 @@ class Cbf2Np():
 if __name__ == '__main__':
 
   # root data directory
-  data_root = 'data/realdata/cbf_files'
+  data_root = '/dls/mx-scratch/adam-vmxm'
 
   # destination directory
-  data_dest = 'data/realdata/npy_files'
+  data_dest = '/scratch/ywl28659/diffraction_data/npy_files'
 
   # instantiate
   do_thing = Cbf2Np(data_root, data_dest)
