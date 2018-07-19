@@ -113,7 +113,8 @@ if __name__ == '__main__':
   data_root = '/dls/mx-scratch/adam-vmxm'
 
   # destination directory
-  data_dest = '/scratch/ywl28659/diffraction_data/npy_files'
+  data_dest = '/media/Elements/obsidian/diffraction_data'
+  assert os.path.exists(data_dest), "Invalid destination path"
 
   # instantiate
   do_thing = Cbf2Np(data_root, data_dest)

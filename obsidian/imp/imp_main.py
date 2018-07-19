@@ -124,18 +124,15 @@ def main2():
   ##################
   
   # Image data directory
-  img_data_dir = (input("Enter directory path for images: 
-                        [default:
-                         data/realdata/npy_files/tray2/a5/grid]") 
-                  or 'data/realdata/npy_files/tray2/a5/grid')
+  img_data_dir = '/media/Elements/obsidian/diffraction_data/tray'+input("Complete directory path for images: /media/Elements/obsidian/diffraction_data/tray") 
   assert os.path.exists(img_data_dir), " not a real directory "
 
   # Tray number
   tray_nr = int(input("Enter tray number: "))
-  assert tray_nr is in (1, 2, 4, 5), "Available tray numbers are 1, 2, 4, 5"
+  assert tray_nr in (1, 2, 4, 5), "Available tray numbers are 1, 2, 4, 5"
   
   # Data batch id
-  ID = input("Enter a batch ID to help identify pickle files saved to obsidian/obsidian/datadump")
+  ID = input("Enter a batch ID to help identify pickle files saved to obsidian/obsidian/datadump: ")
   
   ######################
   # read in data files #
@@ -143,7 +140,9 @@ def main2():
   
   print("Loading image data...") 
   
-  coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
+  total = len(glob(img_data_dir+'/*.npy'))
+  #coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
+  coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[int(round(total/2)):]}
   
   names = list(coll.keys())
 
@@ -188,6 +187,14 @@ def main2():
 
   print("Saving profiles to datadump/{}_profiles.pickle...".format(ID))
   fex.dump_save(ID)
+  
+  #####################
+  #  display example  #
+  #####################
+  
+  demo = list(fex.profiles.values())[20]
+  plt.plot(demo)
+  plt.show()
 
 if __name__ == '__main__':
   #main1()
