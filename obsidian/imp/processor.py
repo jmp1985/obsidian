@@ -83,11 +83,11 @@ class Processor():
     ax.imshow(list(self.processedData.values())[5], cmap='binary', interpolation='nearest')
     return fig, ax
     
-  def dump_save(self):
+  def dump_save(self, ID):
     
     print("Pickling...")
 
-    data_save = open("obsidian/datadump/processed.pickle", "wb")
+    data_save = open("obsidian/datadump/{}_processed.pickle".format(ID), "wb")
     pickle.dump(self.processedData, data_save, protocol=-1)
     data_save.close()
 

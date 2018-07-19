@@ -28,8 +28,8 @@ class FeatureExtractor():
     
     return self.profiles
     
-  def dump_save(self):
+  def dump_save(self, ID):
     
-    profiles_save = open("obsidian/datadump/profiles.pickle", "wb")
+    profiles_save = open("obsidian/datadump/{}_profiles.pickle".format(ID), "wb")
     pickle.dump(self.profiles, profiles_save)
     profiles_save.close()
