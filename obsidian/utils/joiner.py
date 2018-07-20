@@ -15,8 +15,8 @@ def pickle_put(path, data):
 
 def main():
   
-  ID1 = 'T1g1'
-  ID2 = 'T1g1-2'
+  ID1 = 'T1a6'
+  ID2 = 'T1a6-2'
 
   path = 'obsidian/datadump/{}_profiles.pickle'
   part1 = pickle_get(path.format(ID1))

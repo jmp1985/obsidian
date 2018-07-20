@@ -86,20 +86,23 @@ print((data[:,-1]==1).sum())
 model = Sequential()
 
 model.add(Conv1D(filters = 10, kernel_size = 5, activation='relu', input_shape=(2463, 1)))
-print(model.output_shape)
 model.add(MaxPooling1D())
-print(model.output_shape)
-model.add(Conv1D(filters = 20, kernel_size = 5, activation='relu'))
+model.add(Conv1D(filters = 50, kernel_size = 5, activation='relu'))
 model.add(MaxPooling1D())
-model.add(Conv1D(filters = 30, kernel_size = 5, activation='relu'))
+model.add(Conv1D(filters = 70, kernel_size = 5, activation='relu'))
+model.add(MaxPooling1D())
+model.add(Conv1D(filters = 70, kernel_size = 5, activation='relu'))
 model.add(MaxPooling1D())
 
 model.add(Flatten())
 model.add(Dropout(0.5))
 model.add(Dense(200, activation='relu'))
+model.add(Dense(50, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 
 plot_model(model, to_file='demo_model.png')
+
+print(model.summary())
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
