@@ -141,8 +141,8 @@ def main2():
   print("Loading image data...") 
   
   total = len(glob(img_data_dir+'/*.npy'))
-  #coll = {f : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
-  coll = {fname(f) : np.load(f) for f in glob(img_data_dir+'/*.npy')[int(round(total/2)):]}
+  coll = {f : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
+  #coll = {f : np.load(f) for f in glob(img_data_dir+'/*.npy')[:int(round(total/2))]}
   
   names = list(coll.keys())
 

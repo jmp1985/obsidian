@@ -22,24 +22,33 @@ def make_frame():
 
 
 
-def rename(dir_name, root_name):
+def rename(dir_name, root_name, which_data):
   
   d = dir_name
   #'obsidian/datadump'
   r = root_name
   #'/media/Elements/obsidian/diffraction_data'
 
-  files = [f for f in glob(os.path.join(d,'*_profiles.pickle'))]
+  files = [f for f in glob(os.path.join(d,'*_{}.pickle'.format(which_data)))]
 
   for f in files:
     data = pickle.load(open(f, 'rb'))
-    ID = os.path.basename(f).replace('_profiles.pickle', '')
+    ID = os.path.basename(f).replace('_{}.pickle'.format(which_data), '')
     tray_nr = ID[1]
     well = ID[2:]
     folder = os.path.join(r, 'tray{}'.format(tray_nr), well, 'grid')
 
-    for key, item in data:
-      new_key = os.path.join(folder, key)
+    for key, item in data.items():
+      new_key = os.path.join(folder, os.path.splitext(os.path.basename(key))[0])
+      print(key, new_key)
       data[new_key] = data.pop(key)
 
     pickle.dump(data, open(f, 'wb'))
+
+#d = '/dls/science/users/ywl28659/obsidian/obsidian/datadump'
+d = '/media/Elements/obsidian/diffraction_data/classes'
+r = '/media/Elements/obsidian/diffraction_data'
+which_data = 'classifications'
+#which_data = 'profiles'
+rename(d, r, which_data)
+

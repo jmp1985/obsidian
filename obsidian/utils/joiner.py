@@ -11,12 +11,12 @@ def pickle_get(path):
 def pickle_put(path, data):
   pickle_out = open(path, 'wb')
   pickle.dump(data, pickle_out)
-  pickle_out.close()
+:x
 
 def main():
   
-  ID1 = 'T1a6'
-  ID2 = 'T1a6-2'
+  ID1 = 'T1a8'
+  ID2 = 'T1a8-2'
 
   path = 'obsidian/datadump/{}_profiles.pickle'
   part1 = pickle_get(path.format(ID1))
