@@ -20,8 +20,6 @@ def make_frame():
     tray_nr = int(f[re.search('tray', f).end()])
     well = int(f[re.search('a\d', f).end()-1])
 
-
-
 def rename(dir_name, root_name, which_data):
   
   d = dir_name
@@ -39,16 +37,27 @@ def rename(dir_name, root_name, which_data):
     folder = os.path.join(r, 'tray{}'.format(tray_nr), well, 'grid')
 
     for key, item in data.items():
-      new_key = os.path.join(folder, os.path.splitext(os.path.basename(key))[0])
-      print(key, new_key)
+      new_key = os.path.join(folder, os.path.basename(key))
       data[new_key] = data.pop(key)
 
     pickle.dump(data, open(f, 'wb'))
 
-#d = '/dls/science/users/ywl28659/obsidian/obsidian/datadump'
-d = '/media/Elements/obsidian/diffraction_data/classes'
+def add_npy_ext(d, pattern):
+  for f in glob(os.path.join(d, '*{}'.format(pattern))):
+    data = pickle.load(open(f, 'rb'))
+    for key, item in data.items():
+      if not key.endswith('.npy'):
+        new_key=
+
+
 r = '/media/Elements/obsidian/diffraction_data'
+
 which_data = 'classifications'
+d = '/media/Elements/obsidian/diffraction_data/classes'
+
 #which_data = 'profiles'
+#d = '/dls/science/users/ywl28659/obsidian/obsidian/datadump'
+
 rename(d, r, which_data)
+
 
