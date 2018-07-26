@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from obsidian.utils.imgdisp import ImgDisp
+from obsidian.learn.convnet import build_net, plot_performance
 
 def pickle_get(path):
   '''
@@ -39,7 +40,6 @@ profiles = []
 classes = []
 names = []
 for ID in IDs:
-  print(ID)
   prof = pickle_get(path1.format(ID))
   cls = pickle_get(path2.format(ID))
   
@@ -51,13 +51,13 @@ for ID in IDs:
 # DataFrame providing each image with a reference index
 lookup_table = pd.DataFrame({'Path' : names, 'Data' : profiles, 'Class' : classes})
 
-print(lookup_table)
-
 ###########################
 # massage data for keras  #
 ###########################
+
 assert len(profiles) == len(classes)
 print(len(list(lookup_table.index.values)), len(profiles))
+
 # combine and shuffle inputs and targets
 indexed_data = np.column_stack((list(lookup_table.index.values), profiles, classes))
 print(indexed_data.shape)
@@ -72,6 +72,7 @@ split = int(round(0.8*len(data)))
 train_X, train_y = data[:split, :-1], data[:split, -1]
 test_X, test_y = data[split:, :-1], data[split:, -1]
 
+# Retain indexes for tracking
 indexed_traindata = indexed_data[:split]
 indexed_testdata = indexed_data[split:]
 
@@ -92,43 +93,26 @@ print('Proportion of data with class 1: ',(data[:,-1]==1).sum()/len(data))
 ###########################
 #  build neural network   #
 ###########################
-'''
-model = Sequential()
 
-model.add(Conv1D(filters = 10, kernel_size = 5, activation='relu', input_shape=(2463, 1)))
-model.add(MaxPooling1D())
-model.add(Conv1D(filters = 50, kernel_size = 5, activation='relu'))
-model.add(MaxPooling1D())
-model.add(Conv1D(filters = 70, kernel_size = 5, activation='relu'))
-model.add(MaxPooling1D())
-model.add(Conv1D(filters = 70, kernel_size = 5, activation='relu'))
-model.add(MaxPooling1D())
+# Build new model:
+model = build_net()
+model.save('test-model.h5')
 
-model.add(Flatten())
-model.add(Dropout(0.5))
-model.add(Dense(200, activation='relu'))
-model.add(Dense(50, activation='relu'))
-model.add(Dense(1, activation='sigmoid'))
-
-plot_model(model, to_file='demo_model.png')
+# Load prebuilt model
+#model = load_model('test-model.h5')
 
 print(model.summary())
 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-'''
 #################
 #   train net   #
 #################
-'''
-model.fit(train_X[:1000], train_y[:1000], epochs=10, batch_size=20)
-model.save('test-model.h5')
-'''
-model = load_model('test-model.h5')
-print(model.summary())
+
+history = model.fit(train_X[:], train_y[:], validation_data=(test_X, test_y), epochs=25, batch_size=20)
 
 score = model.evaluate(test_X, test_y, batch_size=20)
+fig0, ax0 = plot_performance(history)
 
-print(score)
+print('Score: ',score)
 
 guess = np.squeeze(model.predict_classes(test_X))
 probs = np.squeeze(model.predict_proba(test_X))
@@ -153,9 +137,10 @@ for i in range(num):
 with pd.option_context('display.max_colwidth', 100):
   print(lookup_table.loc[wrong_predictions[:,0]][['Path', 'Class']])
 
+'''
 fig2, ax2 = plt.subplots(num)
 for i in range(num):
   ax2[i].plot(lookup_table.loc[wrong_predictions[:,0]]['Data'].tolist()[i])
-plt.show()
+'''
 
-print()
+plt.show()
