@@ -3,17 +3,19 @@ Image processing main class for testing and developing
 .. moduleauthor:: Fiona Young
 '''
 import numpy as np
-from skimage import data
 from obsidian.imp.processor import Processor
 import matplotlib.pyplot as plt
 import skimage.io as skio
 from obsidian.utils.imgdisp import ImgDisp
+from obsidian.utils.data_handling import *
 import os.path
 from obsidian.fex.trace import Trace
 from obsidian.fex.powerSpect import PowerSpect
 from obsidian.fex.extractor import FeatureExtractor as Fex
 from glob import glob
 import pickle
+import gc
+
 def fname(f):
   '''
   :param f: string, filepath
@@ -122,7 +124,7 @@ def main2():
   ##################
   #   directories  #
   ##################
-  
+  '''
   # Image data directory
   img_data_dir = '/media/Elements/obsidian/diffraction_data/tray'+input("Complete directory path for images: /media/Elements/obsidian/diffraction_data/tray") 
   assert os.path.exists(img_data_dir), " not a real directory "
@@ -133,70 +135,99 @@ def main2():
   
   # Data batch id
   ID = input("Enter a batch ID to help identify pickle files saved to obsidian/obsidian/datadump: ")
+  '''
+  trays = {}
   
-  ######################
-  # read in data files #
-  ######################
-  
-  print("Loading image data...") 
-  
-  total = len(glob(img_data_dir+'/*.npy'))
-  coll = {f : np.load(f) for f in glob(img_data_dir+'/*.npy')[:]}
-  #coll = {f : np.load(f) for f in glob(img_data_dir+'/*.npy')[:int(round(total/2))]}
-  
-  names = list(coll.keys())
+  done = False
 
-  ############################
-  # read in background data  #
-  ############################
-  
-  print("Loading background data...")
-  
-  background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
+  while not done:
+    tray = input("Enter tray number (or press enter if done): ")
+    assert tray in ('1', '2', '4', '5', '')
+    wells = input("Enter comma separated well names for tray number {}: ".format(tray)).split(',')
+    if tray == '' or wells == ['']:
+      done = True
+    else:
+      trays[int(tray)] = wells
 
-  ##################
-  #   processing   #
-  ##################
-  
-  print("Pre-prossessing images...")
+  for tray_nr in trays.keys():
+ 
+    ############################
+    # read in background data  #
+    ############################
+      
+    print("Loading background data for tray {}...".format(tray_nr))
+      
+    background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
+    
+    for well in trays[tray_nr]:
 
-  # Slice coll to use subset of data
-  data = coll
-  
-  process = Processor(data, background)
+      img_data_dir = '/media/Elements/obsidian/diffraction_data/tray{}/{}/grid'.format(tray_nr, well)
+      assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
+      ID = 'T{}{}'.format(tray_nr, well)
 
-  process.rm_artifacts(value=500)
-  process.background()
-  
-  ######################
-  #  feature analysis  #
-  ######################
-  
-  print("Extracting profiles...")
+      batched_files = split_data( glob(img_data_dir+'/*.npy'), 150 ) # batch size of 150
+      print([len(l) for l in batched_files])
 
-  fex = Fex(process.processedData)
+      batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
+      i = 0
+      
+      for files in batched_files: 
+        
+        batchID = batchIDs[i]
+        print('Batch nr: ', i)
+        
+        ######################
+        # read in data files #
+        ######################
+        
+        print("Loading image data...") 
 
-  fex.meanTraces(centre=(1318.37, 1249.65), rmax=400, nangles=20)
+        data = {f : np.load(f) for f in files}
+        names = list(data.keys())
+        
+        ##################
+        #   processing   #
+        ##################
+        
+        print("Pre-prossessing images...")
+        
+        process = Processor(data, background)
 
-  ####################
-  #    saving        #
-  ####################
-  
-  #print("Saving...")
-  #process.dump_save(ID)
+        process.rm_artifacts(value=500)
+        process.background()
+        
+        ######################
+        #  feature analysis  #
+        ######################
+        
+        print("Extracting profiles...")
 
-  print("Saving profiles to datadump/{}_profiles.pickle...".format(ID))
-  fex.dump_save(ID)
-  
-  #####################
-  #  display example  #
-  #####################
-  
-  demo = list(fex.profiles.values())[20]
-  plt.plot(demo)
-  plt.show()
+        fex = Fex(process.processedData)
+
+        fex.meanTraces(centre=(1318.37, 1249.65), rmax=400, nangles=20)
+
+        ####################
+        #    saving        #
+        ####################
+        
+        #print("Saving...")
+        #process.dump_save(ID)
+
+        print("Saving profiles to datadump/{}_profiles.pickle...".format(batchID))
+        fex.dump_save(batchID)
+        
+        del data
+        del fex
+        del process
+        i += 1
+
+      ################
+      # join batches #
+      ################
+
+      paths = ['obsidian/datadump/{}_profiles.pickle'.format(batchID) for batchID in batchIDs]
+      join_files('obsidian/datadump/{}_profiles.pickle'.format(ID), paths)
 
 if __name__ == '__main__':
-  #main1()
   main2()
 

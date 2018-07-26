@@ -16,12 +16,12 @@ class Processor():
   '''
   '''
   
-  def __init__(self, collection, background=None):
+  def __init__(self, coll, background=None):
     '''
     :param collection: dict of images with filenames to be processed
     '''
-    self.collection = collection
-    self.processedData = collection
+    self.collection = coll
+    self.processedData = coll
     self.bg = background
     
   def background(self):
