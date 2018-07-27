@@ -28,13 +28,14 @@ def pickle_get(path):
 ###################################
 
 # this is ugly and needs fixing
-blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','g1'), 4:('f1',), 5:('g1','f1')}
+blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','g1'), 4:('a1-2','a2', 'a3', 'a4', 'f1',), 5:('a1', 'g1','f1')}
 IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
 
 # locations of input data and labels
 path1 = 'obsidian/datadump/{}_profiles.pickle'
 path2 = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle' 
 
+print("Gathering data...")
 # populate inputs and labels lists
 profiles = []
 classes = []
@@ -96,10 +97,6 @@ print('Proportion of data with class 1: ',(data[:,-1]==1).sum()/len(data))
 
 # Build new model:
 model = build_net()
-model.save('test-model.h5')
-
-# Load prebuilt model
-#model = load_model('test-model.h5')
 
 print(model.summary())
 
@@ -107,7 +104,18 @@ print(model.summary())
 #   train net   #
 #################
 
-history = model.fit(train_X[:], train_y[:], validation_data=(test_X, test_y), epochs=25, batch_size=20)
+history = model.fit(train_X[:], train_y[:], validation_data=(test_X, test_y), epochs=15, batch_size=20)
+model.save('test-model.h5')
+
+try:
+  pickle.dump(history.history, open('obsidian/datadump/history.pickle','wb'))
+except:
+  print("History pickle failed")
+'''
+# Load prebuilt model
+model = load_model('test-model.h5')
+history = pickle.load(open('obsidian/datadump/history.pickle','rb'))
+'''
 
 score = model.evaluate(test_X, test_y, batch_size=20)
 fig0, ax0 = plot_performance(history)
@@ -118,6 +126,7 @@ guess = np.squeeze(model.predict_classes(test_X))
 probs = np.squeeze(model.predict_proba(test_X))
 np.set_printoptions(precision=3, suppress=True)
 
+
 #############################
 # analyse wrong predictions #
 #############################
@@ -126,7 +135,7 @@ wrong_predictions = indexed_testdata[guess != indexed_testdata[:,-1]]
 num = len(wrong_predictions)
 print(wrong_predictions, '\nNumber of wrong predictions: ',num, '/',len(guess))
 
-wrongs = ImgDisp([np.load(path+'.npy')[1100:1550,1000:1500] for path in lookup_table.loc[wrong_predictions[:,0]]['Path']])
+wrongs = ImgDisp([np.load(path)[1100:1550,1000:1500] for path in lookup_table.loc[wrong_predictions[:,0]]['Path']])
 
 fig1, ax1 = wrongs.disp()
 fig1.subplots_adjust(wspace=0.02, hspace=0.02)
