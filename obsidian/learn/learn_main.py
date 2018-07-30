@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from obsidian.utils.imgdisp import ImgDisp
-from obsidian.learn.convnet import build_net, plot_performance
-
+from obsidian.learn.convnet import *
+from sklearn.metrics import confusion_matrix
 def pickle_get(path):
   '''
   Method encapsulating the pickle input process to tidy things up
@@ -28,7 +28,7 @@ def pickle_get(path):
 ###################################
 
 # this is ugly and needs fixing
-blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','g1'), 4:('a1-2','a2', 'a3', 'a4', 'f1',), 5:('a1', 'g1','f1')}
+blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1', 'g1','f1')}
 IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
 
 # locations of input data and labels
@@ -94,28 +94,30 @@ print('Proportion of data with class 1: ',(data[:,-1]==1).sum()/len(data))
 ###########################
 #  build neural network   #
 ###########################
+new_model = True
 
-# Build new model:
-model = build_net()
+if new_model:
+  model = build_net()
 
-print(model.summary())
+  print(model.summary())
 
-#################
-#   train net   #
-#################
+  #################
+  #   train net   #
+  #################
 
-history = model.fit(train_X[:], train_y[:], validation_data=(test_X, test_y), epochs=15, batch_size=20)
-model.save('test-model.h5')
+  history = model.fit(train_X[:], train_y[:], validation_data=(test_X, test_y), epochs=25, batch_size=20)
+  model.save('test-model.h5')
 
-try:
-  pickle.dump(history.history, open('obsidian/datadump/history.pickle','wb'))
-except:
-  print("History pickle failed")
-'''
+  try:
+    pickle.dump(history.history, open('obsidian/datadump/history.pickle','wb'))
+  except Exception as e:
+    print("History pickle failed: \n"+e)
+  history = history.history
+
+else:
 # Load prebuilt model
-model = load_model('test-model.h5')
-history = pickle.load(open('obsidian/datadump/history.pickle','rb'))
-'''
+  model = load_model('test-model.h5')
+  history = pickle.load(open('obsidian/datadump/history.pickle','rb'))
 
 score = model.evaluate(test_X, test_y, batch_size=20)
 fig0, ax0 = plot_performance(history)
@@ -135,21 +137,13 @@ wrong_predictions = indexed_testdata[guess != indexed_testdata[:,-1]]
 num = len(wrong_predictions)
 print(wrong_predictions, '\nNumber of wrong predictions: ',num, '/',len(guess))
 
-wrongs = ImgDisp([np.load(path)[1100:1550,1000:1500] for path in lookup_table.loc[wrong_predictions[:,0]]['Path']])
-
-fig1, ax1 = wrongs.disp()
-fig1.subplots_adjust(wspace=0.02, hspace=0.02)
-
-for i in range(num):
-  ax1.flat[i].set_title(wrong_predictions[i,-1])
+wrongs = [np.load(path)[1100:1550,1000:1500] for path in lookup_table.loc[wrong_predictions[:,0]]['Path']]
+show_wrongs(wrongs)
 
 with pd.option_context('display.max_colwidth', 100):
   print(lookup_table.loc[wrong_predictions[:,0]][['Path', 'Class']])
 
-'''
-fig2, ax2 = plt.subplots(num)
-for i in range(num):
-  ax2[i].plot(lookup_table.loc[wrong_predictions[:,0]]['Data'].tolist()[i])
-'''
+cm = confusion_matrix(test_y, guess)
+show_confusion(cm, [0, 1])
 
 plt.show()
