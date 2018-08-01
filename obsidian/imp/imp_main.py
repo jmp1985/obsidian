@@ -124,18 +124,7 @@ def main2():
   ##################
   #   directories  #
   ##################
-  '''
-  # Image data directory
-  img_data_dir = '/media/Elements/obsidian/diffraction_data/tray'+input("Complete directory path for images: /media/Elements/obsidian/diffraction_data/tray") 
-  assert os.path.exists(img_data_dir), " not a real directory "
 
-  # Tray number
-  tray_nr = int(input("Enter tray number: "))
-  assert tray_nr in (1, 2, 4, 5), "Available tray numbers are 1, 2, 4, 5"
-  
-  # Data batch id
-  ID = input("Enter a batch ID to help identify pickle files saved to obsidian/obsidian/datadump: ")
-  '''
   trays = {}
   
   done = False
@@ -143,10 +132,11 @@ def main2():
   while not done:
     tray = input("Enter tray number (or press enter if done): ")
     assert tray in ('1', '2', '4', '5', '')
-    wells = input("Enter comma separated well names for tray number {}: ".format(tray)).split(',')
-    if tray == '' or wells == ['']:
+    
+    if tray == '':
       done = True
     else:
+      wells = input("Enter comma separated well names for tray number {}: ".format(tray)).split(',')
       trays[int(tray)] = wells
 
   for tray_nr in trays.keys():

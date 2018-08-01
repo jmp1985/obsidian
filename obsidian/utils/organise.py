@@ -47,7 +47,9 @@ def add_npy_ext(d, pattern):
     data = pickle.load(open(f, 'rb'))
     for key, item in data.items():
       if not key.endswith('.npy'):
-        new_key=
+        new_key=key+'.npy'
+        data[new_key] = data.pop(key)
+    pickle.dump(data, open(f, 'wb'))
 
 
 r = '/media/Elements/obsidian/diffraction_data'
