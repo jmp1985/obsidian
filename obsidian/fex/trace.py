@@ -1,6 +1,5 @@
 '''
 Tool for extracting and handling intensity profiles
-.. moduleauthor:: Fiona Young
 '''
 
 import math
@@ -11,14 +10,18 @@ import numpy as np
 class Trace():
   '''
   Trace extraction and manipulation class
-  .. autoclass:: Trace
+
+  :ivar int w: image width in pixels
+  :ivar int h: image height in pixels
+  :ivar list lines: array of line coordinates along which image values will be extracted
   '''
   def __init__(self, image_shape, angles, centre=None, rmax=None):
     '''
-    :param image: inputfile as np array
-    :param centre: tuple, (row, col) pixel coordinates of beam centre. If not
-    provided image assumed to be square and centred
-    initialises empty trace array
+    Initialise array of line coordinates corresponding to `angles`. Set instance variables width, height, rmax and lines
+
+    :param tuple image_shape: image dimensions in pixels    
+    :param tuple centre: (row, col) pixel coordinates of beam centre. If not provided image assumed to be square and centred
+    :param int rmax: radius in pixels of data to be extracted, corresponding to maximum resolution of interest
     '''
     self.w = image_shape[1] # image width is number of columns
     self.h = image_shape[0] # image height is number of rows
@@ -38,7 +41,8 @@ class Trace():
 
   def line(self, angle):
     '''
-    line through image
+    Calculate coordinates of a single line through image
+
     :param angle: angle w.r.t. horizontal axis in range (-90, 90] deg
     :returns: line coordinates
     '''
@@ -56,8 +60,10 @@ class Trace():
 
   def readTrace(self, line, img):
     ''' 
-    extract a single line trace through an image
-    :param line: line coordinates as 2d np array
+    Extract image values along a single line
+
+    :param np.array line: line coordinates as 2d np array
+    :param img: input image
     :returns: line coordinates and image values along line
     '''
     # extract image values along line using bilinear interpolation
@@ -66,9 +72,10 @@ class Trace():
   
   def meanTrace(self, img):
     '''
-    calculate the mean image profile across specified angles
-    :param angles: list of angles to be averaged across
-    :returns: traced lines and mean trace values 
+    Calculate the mean image profile across all angles
+    
+    :param img: input image
+    :returns: individual traces and mean trace values 
     '''
     traces = []
     
@@ -81,7 +88,12 @@ class Trace():
 
   def display(self, img, traces, meanVals):
     '''
-    display image with line overlaid and resulting trace plot
+    Display image with lines overlaid and resulting trace plots
+    
+    :param img: input image
+    :param list traces: individual traces from each line
+    :param list meanVals: values averaged across all lines 
+    :return: pyplot figure and axes objects
     '''
     # set up figure gridspace and axes
     fig = plt.figure()

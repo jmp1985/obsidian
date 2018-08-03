@@ -1,5 +1,5 @@
 '''
-module encapsulating all feature extraction processes of obsidian to produce the
+Module encapsulating all feature extraction processes of obsidian to produce the
 machine learning input data
 '''
 
@@ -17,6 +17,18 @@ class FeatureExtractor():
     self.profiles = {}
   
   def meanTraces(self, centre, rmax, nangles):
+    '''
+    Calculate mean trace vectors for all images in self.data
+
+    :param tuple centre: beam centre in pixel coordinates
+    :param int rmax: radius in pixels of data to be extracted, corresponding to the relevant resolution
+    :param int nangles: number of lines to average over: the higher the more representative the extracted profile data
+    :return: list of mean profile vectors extracted from image collection 
+
+    .. note::
+
+      meanTraces() is computationally expensive. Select a low nangles value for testing purposes
+    '''
   
     angles = np.linspace(89, -89, nangles)
     image_shape = list(self.data.values())[0].shape
@@ -29,6 +41,11 @@ class FeatureExtractor():
     return self.profiles
     
   def dump_save(self, ID):
+    '''
+    Save extracted data to pickle file in obsidian/datadump
+
+    :param str ID: data batch label for later identification
+    '''
     
     profiles_save = open("obsidian/datadump/{}_profiles.pickle".format(ID), "wb")
     pickle.dump(self.profiles, profiles_save)
