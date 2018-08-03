@@ -1,8 +1,8 @@
 '''
-Module of methods for building, training and handling models
-:
+Module of Classes and methods for building, training and handling classification models
 '''
 
+import sys, getopt
 from keras.models import Sequential
 from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 from keras.optimizers import Adam
@@ -15,25 +15,43 @@ import itertools
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision
+import pandas as pd
+
 class ProteinClassifier():
-  
   '''
-  Member variables:
-  data_table
-  profiles
-  classes
-  model
-  indexed_data (shuffled)
-  history
-  split
+  Class for specifying, building, training and testing diffraction image classifiers
+
+  :ivar data_table: database of all available images with image path, extracted data and class
+  :ivar profiles: list of profiles
+  :ivar classes: list of class labels
+  :ivar model: Keras model object
+  :ivar indexed_data: (shuffled)
+  :ivar history: created when model trained
+  :ivar split: fraction of data samples to be used for training
+  
+  **Default parameters:**
+    | number of layers: 3
+    | kernel sizes:     min 3, max 100
+    | dropout:          0.3
+    | padding:          same
+    | number of epochs: 30
+    | batch size:       20
   '''
 
   def __init__(self):
+    '''
+    When a ProteinClassifier object is instantiated, data_table, model and indexed_data are set to None to ensure that methods are called in the appropriate order
+    '''
     self.data_table = None
     self.model = None
     self.indexed_data = None
 
   def load_table(self, path):
+    '''
+    Load data from pre-pickled database and extract separate lists for inputs and classes
+
+    :param str path: path of stored data file
+    '''
     self.data_table = pickle_get(path)
     self.profiles = list(self.data_table['Data'])
     self.classes = list(self.data_table['Class'])
@@ -41,7 +59,7 @@ class ProteinClassifier():
 
   def massage(self):
     '''
-    massage data into shape, prepare for model fitting
+    Massage data into shape, prepare for model fitting, populate member variables
     '''
     assert self.data_table is not None, "Load data fist!" 
 
@@ -66,8 +84,17 @@ class ProteinClassifier():
     print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
-  def build_model(self, nlayers=3, min_kern_size=5, max_kern_size=200, padding='same', dropout=0.3):
-    
+  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, dropout=0.3, padding='same' ):
+    '''
+    Construct and compile a keras Sequential model according to spec
+
+    :param int nlayers: number of 1D convolution layers (default 3)
+    :param int min_kern_size: smallest kernel size (default 3)
+    :param int max_kern_size: largest kernel size (default 100)
+    :param float dropout: Dropout rate (default 0.3)
+    :param str padding: padding mode for convolution layers (default 'same')
+    :return: created and compiled keras model
+    '''
     kernel_sizes = np.linspace(min_kern_size, max_kern_size, nlayers, dtype=int)
     nfilters = np.linspace(20, 50, nlayers, dtype=int)
     
@@ -82,19 +109,7 @@ class ProteinClassifier():
       model.add(Conv1D(filters=nfilters[i], kernel_size=kernel_sizes[i].item(), padding=padding, activation='relu'))
       model.add(MaxPooling1D())
       model.add(Dropout(dropout))
-    '''
-    model.add(Conv1D(filters = 30, kernel_size = 10, padding = 'same', activation='relu'))
-    model.add(MaxPooling1D())
-    model.add(Dropout(0.4))
-    
-    model.add(Conv1D(filters = 40, kernel_size = 50, padding = 'same', activation='relu'))
-    model.add(MaxPooling1D())
-    model.add(Dropout(0.4))
-  
-    model.add(Conv1D(filters = 30, kernel_size = 200, padding = 'same', activation='relu'))
-    model.add(MaxPooling1D())
-    model.add(Dropout(0.4))
-    '''
+
     model.add(Flatten())
     
     model.add(Dense(150, activation='relu'))
@@ -103,7 +118,7 @@ class ProteinClassifier():
     model.add(Dense(1, activation='sigmoid'))
     #optimiser
     #adam = Adam(lr=0.01, decay=0.5)
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision])
     
     self.model = model
     return model
@@ -111,6 +126,10 @@ class ProteinClassifier():
   def train_model(self, end=-1, epochs=30, batch_size=20):
     '''
     Shuffle and split data, then feed to model
+
+    :param int epochs: number of training epochs (default 30)
+    :param int batch_size: number of samples per weight update computation (default 20)
+    :param int end: number of training samples (default use whole training set)
     '''
     assert self.model is not None, "Build model first!"
     
@@ -135,8 +154,14 @@ class ProteinClassifier():
     self.plot_performance(self.history) 
 
   def test_model(self, batch_size=20):
+    '''
+    Test model after training. Display training stats and test results
+
+    :param int batch_size:
+    '''
+
     score = self.model.evaluate(self.X_test, self.y_test, batch_size=batch_size)
-    print("Loss: {0:.2f}, Accuracy: {1:.2f}".format(score[0], score[1]))
+    print("Loss: {0:.2f}, Accuracy: {1:.2f}, Precision: {2:.2f}".format(score[0], score[1], score[2]))
     
     # Analyse performance
     predicted = self.model.predict_classes(self.X_test)
@@ -150,11 +175,11 @@ class ProteinClassifier():
     wrong_predictions = indexed_test[ predicted != indexed_test[:,-1]]
     '''
 
-  def grid_search(self):
+  def grid_search(self, batch_size=20, epochs=30, end=-1):
     '''
     Perform a grid search of parameter space to find optimal hyperparameter configuration
     '''
-    model = KerasClassifier(build_fn=self.build_model, batch_size=20, epochs=20, verbose=0)
+    model = KerasClassifier(build_fn=self.build_model, batch_size=batch_size, epochs=epochs, verbose=2)
     epochs = [35, 50]
     dropout = [0.2, 0.3, 0.5]
     max_kern_size = [50, 100, 200, 400]
@@ -163,37 +188,66 @@ class ProteinClassifier():
     batch_size = [10, 20]
     padding = ['valid', 'same']
     
-    param_grid = dict(epochs=epochs, dropout=dropout, max_kern_size=max_kern_size, nlayers=nlayers, batch_size=batch_size, padding=padding)
-    #param_grid = dict(padding=padding)
+    #param_grid = dict(epochs=epochs, dropout=dropout, max_kern_size=max_kern_size, nlayers=nlayers, batch_size=batch_size, padding=padding)
+    param_grid = dict(padding=padding, nlayers=nlayers, dropout=dropout)
 
-    grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=['accuracy', 'precision'], refit=False)
-    search_result = grid.fit(self.shuffled_data[:,:-1], self.shuffled_data[:,-1])
-    pickle_put('obsidian/datadump/grid_search.pickle', search_result)
-
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=['accuracy', 'precision'], refit='precision')
+    search_result = grid.fit(self.shuffled_data[:end,:-1], self.shuffled_data[:end,-1])
+    
+    results = pd.DataFrame(search_result.cv_results_)
+    try:
+      print(results)
+    except Exception as e:
+      print(e)
+    try:
+      pickle_put('obsidian/datadump/grid_search.pickle', results)
+    except Exception as e:
+      print(e)
+      
   def plot_performance(self, history):
     '''
-    :param history: keras history object containing loss and accuracty info from training
+    Plot evolution of metrics such as accuracy and loss as a function of epoch number
+
+    :param history: keras history object containing metric info from training
     '''
-    fig, (ax1, ax2) = plt.subplots(ncols=2)
+    fig, ((ax1, ax2),(ax3, ax4)) = plt.subplots(ncols=2, nrows=2)
     
-    ax1.plot(history['loss'], label = 'train', color = '#ff335f')
-    ax1.plot(history['val_loss'], label = 'validation', color = '#5cd6d6')
+    ax1.plot(history['loss'], label = 'train', color = '#73ba71')
+    ax1.plot(history['val_loss'], label = 'validation', color = '#91bf8f')
     ax1.set_xlabel('epoch')
     ax1.set_ylabel('loss')
     
-    ax2.plot(history['acc'], label = 'train', color = '#ff335f')
-    ax2.plot(history['val_acc'], label = 'validation', color = '#5cd6d6')
+    ax2.plot(history['acc'], label = 'train', color = '#73ba71')
+    ax2.plot(history['val_acc'], label = 'validation', color = '#91bf8f')
     ax2.set_xlabel('epoch')
     ax2.set_ylabel('accuracy')
     
+    ax3.plot(history['precision'], label = 'train', color = '#73ba71')
+    ax3.plot(history['val_precision'], label = 'validation', color = '#91bf8f')
+    ax3.set_xlabel('epoch')
+    ax3.set_ylabel('precision')
+
+    plt.tight_layout()
     plt.legend(loc='lower right')
   
   def show_confusion(self, cm, classes):
     '''
-    Display confusion plot
-    :param cm: calcualted confusion matrix
-    :classes: list of class labels
+    Display confusion plot and stats
+
+    :param array cm: calcualted confusion matrix
+    :param classes: list of class labels
     '''
+
+    # Stats
+    [[tn, fp],[fn, tp]] = cm
+    tpr = tp / (fn + tp) # True positive rate, Sensitivity
+    tnr = tn / (tn + fp) # True negative rate, Specificity
+    ppv = tp / (tp + fp) # Positive predictive value, Precision
+    npv = tn / (tn + fn) # Negative predictive value
+    stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:', tnr, 'PPV (Precision):', ppv, 'NPV:', npv)
+    print(stats)
+
+    # Plot
     plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.GnBu)
     plt.colorbar()
@@ -211,6 +265,7 @@ class ProteinClassifier():
   def show_wrongs(self, wrongs, wrong_predictions, probs):
     '''
     Display wongly classified images together with their true class and predicted class probability
+
     :param wrongs: paths of images
     :param wrong_predications: predicted classes
     :param probs: predicted probabilities
@@ -227,16 +282,47 @@ class ProteinClassifier():
     except Exception as e:
       print("Couldn't label plots: \n", e)
 
-def main():
+def main(argv):
+
+  build_kwargs = {}
+  train_kwargs = {}
+  mode='normal_testing'
+  
+  # Parse command line options
+  try:
+    opts, args = getopt.getopt(argv, 'n:b:e:d:', ['mode='])
+  except getopt.GetoptError:
+    print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
+    sys.exit(2)
+  for opt, arg in opts:
+    if opt=='-n':
+      build_kwargs['nlayers'] = int(arg)
+    elif opt=='-b':
+      train_kwargs['batch_size'] = int(arg)
+    elif opt=='-e':
+      train_kwargs['epochs'] = int(arg)
+    elif opt=='-d':
+      train_kwargs['end'] = int(arg)
+    elif opt=='--mode':
+      mode = arg
+
   PC = ProteinClassifier()
   PC.load_table('obsidian/datadump/database.pickle')
-  PC.massage()
-  PC.grid_search()
-  #PC.build_model(nlayers=3, min_kern_size=3, max_kern_size=40)
-  #PC.train_model(end=100, epochs=10)
-  #PC.test_model()
+  
+  # Optional grid search run
+  if not mode=='normal_testing':
+    PC.massage()
+    PC.grid_search(**train_kwargs)
+  
+  # Build and train model with default parameters except where 
+  # specified otherwise
+  else:
+    PC.build_model(**build_kwargs)
+    PC.train_model(**train_kwargs)
+    PC.test_model()
+  
   plt.show()
   
 
 if __name__ == '__main__':
-  main()
+  main(sys.argv[1:])

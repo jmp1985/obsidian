@@ -1,5 +1,5 @@
 '''
-main and experimental program for the machine learning stage of obsidian
+Main and experimental program for the machine learning stage of obsidian
 '''
 
 import os.path

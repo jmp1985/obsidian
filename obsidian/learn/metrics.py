@@ -1,8 +1,5 @@
 '''
 Custom metrics for assessing performance of obsidian protein classifier
-.. automodule:: metrics
-    :members:
-.. moduleauthor:: Fiona Young
 '''
 
 import keras.backend as K
