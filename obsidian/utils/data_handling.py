@@ -1,5 +1,5 @@
 '''
-general data handling for loading and analysis
+General data handling for loading and analysis
 '''
 
 import pickle
@@ -14,7 +14,6 @@ def pickle_put(path, data):
   pickle.dump(data, pickle_out)
 
 def join_files(end_path, paths):
-    
   all_data = {}
 
   for path in paths:
@@ -27,7 +26,6 @@ def split_data(data_list, chunk_size):
   handle reading and processing data in chunks to avoid the process being killed
   '''
   return [data_list[i:i+chunk_size] for i in range(0, len(data_list), chunk_size)]
-
 
 def main():
   

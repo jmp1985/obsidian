@@ -41,9 +41,9 @@ class Cbf2Np():
 
   def cbf_to_npfile(self, cbf_filepath, npy_filename=None, header=False):
     '''
-    convert single cbf file contents to numpy array and save in specified
+    Convert single cbf file contents to numpy array and save in specified
     directory
-    .. automethod:: cbf_to_npfile
+
     :param cbf_filename: str, input file path
     :param npy_filename: str, output file name (optional)
     '''
@@ -69,8 +69,7 @@ class Cbf2Np():
   
   def read_data_directory(self):
     '''
-    read directory and parse each file into a numpy array, save
-    .. automethod:: read_cbf_directory
+    Read directory and parse each file into a numpy array, save
     '''
     
     for directory in self.all_dirs.keys():
@@ -85,7 +84,7 @@ class Cbf2Np():
 
   def extract_header(self, cbf_filepath, npy_dir, bg=False):
     '''
-    assume all headers the same for a directory of image files (i.e directory
+    Assume all headers the same for a directory of image files (i.e directory
     contains data from single aquisition experiment)
     '''
     header = open(os.path.join(npy_dir, "{}header.txt".format("bg" if bg else "")), "w")

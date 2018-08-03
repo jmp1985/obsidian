@@ -1,5 +1,5 @@
 '''
-program for reading in background files for each tray and saving as averaged npy
+Program for reading in background files for each tray and saving as averaged npy
 file
 *************************
 !! run in dials.python !!

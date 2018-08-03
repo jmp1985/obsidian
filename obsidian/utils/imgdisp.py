@@ -1,7 +1,5 @@
 '''
 Tool for displaying a set of images side by side
-
-.. moduleauthor:: Fiona Young
 '''
 
 import matplotlib.pyplot as plt
@@ -14,6 +12,7 @@ import math
 
 class ImgDisp():
   '''
+  Display a collection of images in a compact arrangement
   '''
   def __init__(self, collection, bgimage=None):
     '''
@@ -33,7 +32,8 @@ class ImgDisp():
 
   def disp(self):
     '''
-    Display image collection together with background image
+    Display image collection together with background image if specified
+
     :returns: fig, axes
     '''
     fig, axes = plt.subplots(self.shape[0], self.shape[1])
