@@ -3,13 +3,14 @@ Module of Classes and methods for building, training and handling classification
 '''
 
 import sys, getopt
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 from keras.optimizers import Adam
 from keras.wrappers.scikit_learn import KerasClassifier
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
+from sklearn.utils import shuffle
 from sklearn.model_selection import GridSearchCV
 import itertools
 from obsidian.utils.imgdisp import ImgDisp
@@ -63,21 +64,22 @@ class ProteinClassifier():
     '''
     assert self.data_table is not None, "Load data fist!" 
 
-    # Combine and shuffle inputs and targets
-    self.indexed_data = np.column_stack( (list(self.data_table.index.values), self.profiles, self.classes) )
-    np.random.shuffle(self.indexed_data)
-    
-    # Once shuffled strip index and reshape for keras
-    data = self.indexed_data[:,1:].reshape(self.indexed_data.shape[0], self.indexed_data.shape[1]-1, 1)
-    self.shuffled_data = data
+    # Reshape data to have dimensions (nsamples, ndata_points, 1)
+    if len(np.stack(self.data_table['Data'].values).shape) < 3:
+      self.data_table['Data'] = list(np.expand_dims(np.stack(self.data_table['Data'].values), 2))
 
+    self.data_table = shuffle(self.data_table)
+    
     # Split into train and test sets
     split_val = 0.8
-    self.split = int(round(split_val*len(data)))
+    self.split = int(round(split_val*len(self.data_table)))
+
+    self.train_data = self.data_table[:self.split]
+    self.test_data = self.data_table[self.split:]
     
-    # Last column of data contains class labels
-    self.X_train, self.y_train = data[:self.split, :-1], data[:self.split, -1]
-    self.X_test, self.y_test = data[self.split:, :-1], data[self.split:, -1]
+    # Extract training and test inputs and targets
+    self.X_train, self.y_train = np.stack(self.train_data['Data'].values), np.stack(self.train_data['Class'].values)
+    self.X_test, self.y_test = np.stack(self.test_data['Data'].values), np.stack(self.test_data['Class'].values)
 
   def print_summary(self):
     print("Data loaded!")
@@ -138,20 +140,20 @@ class ProteinClassifier():
 
     self.history = self.model.fit(self.X_train[:end], self.y_train[:end], validation_data=(self.X_test, self.y_test), epochs=epochs, batch_size=batch_size).history
     
-    self.model.save('test-model.h5')
+    self.model.save('obsidian/datadump/test-model.h5')
     pickle_put('obsidian/datadump/history.pickle', self.history)
     
     # Plot training history
-    self.plot_performance(self.history)
+    self.plot_train_performance(self.history)
 
   def model_from_save(self):
     print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
 
-    self.model = load_model('test-model.h5')
+    self.model = load_model('obsidian/datadump/test-model.h5', custom_objects={'precision':precision})
     self.history = pickle_get('obsidian/datadump/history.pickle')
 
     # Plot training history
-    self.plot_performance(self.history) 
+    self.plot_train_performance(self.history) 
 
   def test_model(self, batch_size=20):
     '''
@@ -166,9 +168,12 @@ class ProteinClassifier():
     # Analyse performance
     predicted = self.model.predict_classes(self.X_test)
     probs = self.model.predict_proba(self.X_test)
+    self.test_data['Prediction'] = probs 
 
     cm = confusion_matrix(self.y_test, predicted)
     self.show_confusion(cm, [0,1])
+
+    self.plot_test_results()
     
     '''
     indexed_test = indexed_data[self.split:]
@@ -181,15 +186,14 @@ class ProteinClassifier():
     '''
     model = KerasClassifier(build_fn=self.build_model, batch_size=batch_size, epochs=epochs, verbose=2)
     epochs = [35, 50]
-    dropout = [0.2, 0.3, 0.5]
+    #dropout = [0.2, 0.3, 0.5]
     max_kern_size = [50, 100, 200, 400]
     min_kern_size = [3, 5, 10]
-    nlayers = [2, 3, 4]
+    #nlayers = [2, 3, 4]
     batch_size = [10, 20]
-    padding = ['valid', 'same']
-    
-    #param_grid = dict(epochs=epochs, dropout=dropout, max_kern_size=max_kern_size, nlayers=nlayers, batch_size=batch_size, padding=padding)
-    param_grid = dict(padding=padding, nlayers=nlayers, dropout=dropout)
+    #padding = ['valid', 'same']
+    param_grid = dict(max_kern_size=max_kern_size, min_kern_size=min_kern_size, dropout=[0.3], nlayers=[4], padding=['valid'])
+    #param_grid = dict(padding=padding, nlayers=nlayers, dropout=dropout)
 
     grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=['accuracy', 'precision'], refit='precision')
     search_result = grid.fit(self.shuffled_data[:end,:-1], self.shuffled_data[:end,-1])
@@ -204,32 +208,47 @@ class ProteinClassifier():
     except Exception as e:
       print(e)
       
-  def plot_performance(self, history):
+  def plot_train_performance(self, history):
     '''
     Plot evolution of metrics such as accuracy and loss as a function of epoch number
 
     :param history: keras history object containing metric info from training
     '''
-    fig, ((ax1, ax2),(ax3, ax4)) = plt.subplots(ncols=2, nrows=2)
+    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, nrows=1)
     
     ax1.plot(history['loss'], label = 'train', color = '#73ba71')
-    ax1.plot(history['val_loss'], label = 'validation', color = '#91bf8f')
+    ax1.plot(history['val_loss'], label = 'validation', color = '#5e9ec4')
     ax1.set_xlabel('epoch')
     ax1.set_ylabel('loss')
     
     ax2.plot(history['acc'], label = 'train', color = '#73ba71')
-    ax2.plot(history['val_acc'], label = 'validation', color = '#91bf8f')
+    ax2.plot(history['val_acc'], label = 'validation', color = '#5e9ec4')
     ax2.set_xlabel('epoch')
     ax2.set_ylabel('accuracy')
     
     ax3.plot(history['precision'], label = 'train', color = '#73ba71')
-    ax3.plot(history['val_precision'], label = 'validation', color = '#91bf8f')
+    ax3.plot(history['val_precision'], label = 'validation', color = '#5e9ec4')
     ax3.set_xlabel('epoch')
     ax3.set_ylabel('precision')
 
-    plt.tight_layout()
     plt.legend(loc='lower right')
+    plt.tight_layout()
   
+  def plot_test_results(self):
+    sort = self.test_data.sort_values('Prediction', ascending=False)
+
+    x = np.arange(len(sort))
+    preds = sort['Prediction'].values
+
+    truex = np.where(sort['Class'] == np.rint(sort['Prediction']))[0]
+    trues = sort.iloc[sort['Class'].values == np.rint(sort['Prediction'].values)]
+
+    falsex = np.where(sort['Class'] != np.rint(sort['Prediction']))[0]
+    falses = sort.iloc[sort['Class'].values != np.rint(sort['Prediction'].values)]
+    
+    plt.figure()
+    plt.plot(x, preds, truex, trues['Class'].values, 'g.', falsex, falses['Class'].values, 'r.') 
+
   def show_confusion(self, cm, classes):
     '''
     Display confusion plot and stats
@@ -310,12 +329,16 @@ def main(argv):
   PC.load_table('obsidian/datadump/database.pickle')
   
   # Optional grid search run
-  if not mode=='normal_testing':
+  if mode=='grid':
     PC.massage()
     PC.grid_search(**train_kwargs)
   
   # Build and train model with default parameters except where 
   # specified otherwise
+  elif mode=='saved':
+    PC.massage()
+    PC.model_from_save()
+    PC.test_model()
   else:
     PC.build_model(**build_kwargs)
     PC.train_model(**train_kwargs)
