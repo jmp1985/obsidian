@@ -320,11 +320,13 @@ def main(argv):
   
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:', ['mode='])
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:o:', ['mode='])
   except getopt.GetoptError as e:
     print(e)
     print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
     sys.exit(2)
+  if '-w' in opts and not 'custom' in args:
+    print("Warning: providing loss weight meaningless if custom loss function not specified")
   for opt, arg in opts:
     if opt=='-n':
       build_kwargs['nlayers'] = int(arg)
@@ -332,6 +334,10 @@ def main(argv):
       build_kwargs['padding'] = arg
     elif opt=='-l':
       build_kwargs['loss'] = arg
+    elif opt=='-w':
+      build_kwargs['loss_weight'] = float(arg)
+    elif opt=='-o':
+      build_kwargs['dropout'] = float(arg)
     elif opt=='-b':
       train_kwargs['batch_size'] = int(arg)
     elif opt=='-e':

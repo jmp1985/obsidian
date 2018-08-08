@@ -64,8 +64,10 @@ def process(image_directories, background_files, IDs, direct, nangles=20, proces
   :param list image_directories: list of directories containing raw image files in npy format
   :param list background_files: list of npy background files corresponding to the image directories
   :param list IDs: list of identification strings for each image set
+  :param str direct: destination folder for intermediate processing files
   :param int nangles: number of line profiles to extract from each image
-  :param bool process: if True, preprocess images becore 
+  :param bool process: if True, preprocess images before feature extraction
+  :param bool backgroun: if True, perform background subtraction as part of image processing
   '''
   
   for folder, bg_file, ID in zip(image_directories, background_files, IDs):
