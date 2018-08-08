@@ -50,10 +50,10 @@ class Trace():
     
     x0 = self.rmax*math.cos(math.radians(angle))
     y0 = self.rmax*math.sin(math.radians(angle))
-    r0, c0 = self.cent[0]+y0, self.cent[1]-x0 # in pixel coordinates
-    r1, c1 = self.cent[0]-y0, self.cent[1]+x0 
+    r0, c0 = self.cent[0]+y0, self.cent[1]-x0 # start row and column in pixel coordinates
+    r1, c1 = self.cent[0]-y0, self.cent[1]+x0 # end row and column in pixel coordinates
 
-    num = self.w 
+    num = self.w # number of points on line
     r, c = np.linspace(r0, r1, num), np.linspace(c0, c1, num)
     # return line coordinates 
     return np.vstack((r, c))

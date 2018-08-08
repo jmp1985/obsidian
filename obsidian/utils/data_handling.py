@@ -43,14 +43,8 @@ def make_frame(datadict, classified=False):
 
   df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], columns =['Path', 'Data', 'Class']) if classified else pd.DataFrame([[key, data[key]] for key in data.keys()], columns=['Path', 'Data'])
   
-  '''
-  for name, l in datadict.items():
-    all_files = {}
-    for path in l:
-      all_files.update(pickle_get(l))
-    df = pd.DataFrame.from_dict(all_files, orient='index') 
-  '''
   return df
+
 def rename(dir_name, root_name, which_data):
   d = dir_name
   #'obsidian/datadump'
@@ -74,7 +68,7 @@ def rename(dir_name, root_name, which_data):
 
 def add_npy_ext(d, pattern):
   for f in glob(os.path.join(d, '*{}'.format(pattern))):
-    data = pickle.load(open(f, 'rb'))
+    data = zapickle.load(open(f, 'rb'))
     for key, item in data.items():
       if not key.endswith('.npy'):
         new_key=key+'.npy'
