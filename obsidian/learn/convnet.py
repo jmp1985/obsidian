@@ -86,7 +86,7 @@ class ProteinClassifier():
     print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
-  def build_model(self, nlayers=3, min_kern_size=5, max_kern_size=100, dropout=0.3, padding='same', loss='binary_crossentropy'):
+  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, dropout=0.3, padding='same', loss='binary_crossentropy', loss_weight=0.5):
     '''
     Construct and compile a keras Sequential model according to spec
 
@@ -99,7 +99,7 @@ class ProteinClassifier():
     :return: created and compiled keras model
     '''
     kernel_sizes = np.linspace(min_kern_size, max_kern_size, nlayers, dtype=int)
-    nfilters = np.linspace(20, 70, nlayers, dtype=int)
+    nfilters = np.linspace(20, 40, nlayers, dtype=int)
     
     model = Sequential()
 
@@ -124,7 +124,7 @@ class ProteinClassifier():
     #adam = Adam(lr=0.01, decay=0.5)
   
     if loss == 'custom':
-      loss = weighted_binary_crossentropy(weight=5)
+      loss = weighted_binary_crossentropy(weight=loss_weight)
 
     model.compile(loss=loss, optimizer='adam', metrics=['accuracy', precision])
     
@@ -320,7 +320,7 @@ def main(argv):
   
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:', ['mode='])
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:', ['mode='])
   except getopt.GetoptError as e:
     print(e)
     print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
