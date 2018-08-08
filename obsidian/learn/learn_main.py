@@ -30,7 +30,7 @@ def pickle_get(path):
 
 def load_and_save():
 # is ugly and needs fixing
-  blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1', 'a2', 'g1','f1')}
+  blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1', 'a2', 'g1','f1')}
   IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
 
 # locations of input data and labels
@@ -57,8 +57,8 @@ def load_and_save():
   pickle.dump(lookup_table, open('obsidian/datadump/database.pickle', 'wb'))
   return profiles, classes, lookup_table
 
-def load_frame():
-  lookup_table = pickle_get('obsidian/datadump/database.pickle')
+def load_frame(path='obsidian/datadump/database.pickle') :
+  lookup_table = pickle_get(path)
   return list(lookup_table['Data']), list(lookup_table['Class']), lookup_table
 
 def main():

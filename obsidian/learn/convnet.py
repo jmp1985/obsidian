@@ -15,7 +15,7 @@ from sklearn.model_selection import GridSearchCV
 import itertools
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
-from obsidian.learn.metrics import precision
+from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 import pandas as pd
 
 class ProteinClassifier():
@@ -86,7 +86,7 @@ class ProteinClassifier():
     print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
-  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, dropout=0.3, padding='same' ):
+  def build_model(self, nlayers=3, min_kern_size=5, max_kern_size=100, dropout=0.3, padding='same', loss='binary_crossentropy'):
     '''
     Construct and compile a keras Sequential model according to spec
 
@@ -95,10 +95,11 @@ class ProteinClassifier():
     :param int max_kern_size: largest kernel size (default 100)
     :param float dropout: Dropout rate (default 0.3)
     :param str padding: padding mode for convolution layers (default 'same')
+    :param str loss: loss function to use to determine weight updates
     :return: created and compiled keras model
     '''
     kernel_sizes = np.linspace(min_kern_size, max_kern_size, nlayers, dtype=int)
-    nfilters = np.linspace(20, 50, nlayers, dtype=int)
+    nfilters = np.linspace(20, 70, nlayers, dtype=int)
     
     model = Sequential()
 
@@ -114,13 +115,18 @@ class ProteinClassifier():
 
     model.add(Flatten())
     
-    model.add(Dense(150, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Dense(200, activation='relu'))
+    model.add(Dropout(dropout))
     model.add(Dense(50, activation='relu'))
+    #model.add(Dense(2, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
     #optimiser
     #adam = Adam(lr=0.01, decay=0.5)
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision])
+  
+    if loss == 'custom':
+      loss = weighted_binary_crossentropy(weight=5)
+
+    model.compile(loss=loss, optimizer='adam', metrics=['accuracy', precision])
     
     self.model = model
     return model
@@ -161,20 +167,19 @@ class ProteinClassifier():
 
     :param int batch_size:
     '''
-
     score = self.model.evaluate(self.X_test, self.y_test, batch_size=batch_size)
     print("Loss: {0:.2f}, Accuracy: {1:.2f}, Precision: {2:.2f}".format(score[0], score[1], score[2]))
     
     # Analyse performance
     predicted = self.model.predict_classes(self.X_test)
     probs = self.model.predict_proba(self.X_test)
-    self.test_data['Prediction'] = probs 
+    self.test_data['Prediction'] = probs
 
     cm = confusion_matrix(self.y_test, predicted)
     self.show_confusion(cm, [0,1])
 
     self.plot_test_results()
-    
+
     '''
     indexed_test = indexed_data[self.split:]
     wrong_predictions = indexed_test[ predicted != indexed_test[:,-1]]
@@ -259,16 +264,22 @@ class ProteinClassifier():
 
     # Stats
     [[tn, fp],[fn, tp]] = cm
-    tpr = tp / (fn + tp) # True positive rate, Sensitivity
+    tpr = tp / (fn + tp) # True positive rate, Sensitivity, recall
     tnr = tn / (tn + fp) # True negative rate, Specificity
     ppv = tp / (tp + fp) # Positive predictive value, Precision
     npv = tn / (tn + fn) # Negative predictive value
-    stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:', tnr, 'PPV (Precision):', ppv, 'NPV:', npv)
+    f1 = 2 * (ppv * tpr) / (ppv + tpr)
+    stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}\n{8:<20}{9:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:',
+    tnr, 'PPV (Precision):', ppv, 'NPV:', npv, 'F1 score:', f1)
     print(stats)
 
     # Plot
     plt.figure()
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.GnBu)
+    try:
+      plt.imshow(cm, interpolation='nearest', cmap='magma_r')
+    except Exception as e:
+      print(e)
+      plt.imshow(cm, interpolation='nearest', cmap=plt.cm.GnBu)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes)
@@ -309,13 +320,18 @@ def main(argv):
   
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:', ['mode='])
-  except getopt.GetoptError:
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:', ['mode='])
+  except getopt.GetoptError as e:
+    print(e)
     print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
     sys.exit(2)
   for opt, arg in opts:
     if opt=='-n':
       build_kwargs['nlayers'] = int(arg)
+    elif opt=='-p':
+      build_kwargs['padding'] = arg
+    elif opt=='-l':
+      build_kwargs['loss'] = arg
     elif opt=='-b':
       train_kwargs['batch_size'] = int(arg)
     elif opt=='-e':

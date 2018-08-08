@@ -3,6 +3,8 @@ Custom metrics for assessing performance of obsidian protein classifier
 '''
 
 import keras.backend as K
+from theano.tensor import basic as T
+from theano.tensor import nnet, clip
 
 def precision(y_true, y_pred):
   '''
@@ -15,3 +17,16 @@ def precision(y_true, y_pred):
   predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
   precision = true_positives / (predicted_positives + K.epsilon())
   return precision
+
+def weighted_binary_crossentropy(weight, from_logits=False):
+  
+  def loss(target, output):
+    # Not entirely sure what this is for but it was in the Keras backend method
+    if from_logits:
+      output = nnet.sigmoid(output)
+    output = clip(output, K.epsilon(), 1.0 - K.epsilon())
+    # Modified log loss equation with weight for target positive 
+    return -(weight * target * T.log(output) + (1.0 - target) * T.log(1.0 - output))
+  
+  return loss
+  
