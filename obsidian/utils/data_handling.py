@@ -28,19 +28,21 @@ def split_data(data_list, chunk_size):
   '''
   return [data_list[i:i+chunk_size] for i in range(0, len(data_list), chunk_size)]
 
-def make_frame(datadict):
+def make_frame(datadict, classified=False):
   '''
   :param dict datadict: dict in with entries Type:pathlist with Type e.g 'Class', 'Data'
+  :param bool classified: if True, construct frame with Class column
   '''
   data = {}
   for path in datadict['Data']:
     data.update(pickle_get(path))
-  classes = {}
-  for path in datadict['Class']:
-    classes.update(pickle_get(path))
+  if classified:  
+    classes = {}
+    for path in datadict['Class']:
+      classes.update(pickle_get(path))
 
-  df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], columns =['Path', 'Data', 'Class'])
-  print(df)
+  df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], columns =['Path', 'Data', 'Class']) if classified else pd.DataFrame([[key, data[key]] for key in data.keys()], columns=['Path', 'Data'])
+  
   '''
   for name, l in datadict.items():
     all_files = {}
