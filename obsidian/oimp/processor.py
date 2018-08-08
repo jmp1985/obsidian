@@ -7,6 +7,7 @@ from skimage import img_as_ubyte, exposure, restoration
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import os
 
 class Processor():
   '''
@@ -59,16 +60,17 @@ class Processor():
     ax.imshow(list(self.processedData.values())[5], cmap='binary', interpolation='nearest')
     return fig, ax
     
-  def dump_save(self, ID):
+  def dump_save(self, ID, path='default'):
     '''
     Save processed images to pickle file
 
     :param str ID: identification label
     '''
+    path = os.path.join('obsidian/datadump' if path == 'default' else path, "{}_processed.pickle".format(ID))
     
     print("Pickling...")
 
-    data_save = open("obsidian/datadump/{}_processed.pickle".format(ID), "wb")
+    data_save = open(path, "wb")
     pickle.dump(self.processedData, data_save, protocol=-1)
     data_save.close()
 

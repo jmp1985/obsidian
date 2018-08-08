@@ -6,6 +6,7 @@ machine learning input data
 from .trace import Trace
 import numpy as np
 import pickle
+import os
 
 class FeatureExtractor():
   
@@ -40,13 +41,15 @@ class FeatureExtractor():
     
     return self.profiles
     
-  def dump_save(self, ID):
+  def dump_save(self, ID, path='default'):
     '''
     Save extracted data to pickle file in obsidian/datadump
 
     :param str ID: data batch label for later identification
     '''
     
-    profiles_save = open("obsidian/datadump/{}_profiles.pickle".format(ID), "wb")
+    path = os.path.join('obsidian/datadump' if path == 'default' else path, "{}_profiles.pickle".format(ID))
+
+    profiles_save = open(path, "wb")
     pickle.dump(self.profiles, profiles_save)
     profiles_save.close()
