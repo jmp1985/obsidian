@@ -17,6 +17,7 @@ from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 import pandas as pd
+import pickle
 
 class ProteinClassifier():
   '''
@@ -46,6 +47,37 @@ class ProteinClassifier():
     self.data_table = None
     self.model = None
     self.indexed_data = None
+  
+  @staticmethod
+  def make_database():
+    '''
+    '''
+    # is ugly and needs fixing
+    blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1','a2','g1','f1'), 6:('a1-2', 'a2-1', 'a3')}
+    IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
+
+    # Locations of input data and labels
+    path1 = 'obsidian/datadump/{}_profiles.pickle'
+    path2 = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle' 
+
+    print("Gathering data...")
+    # Populate inputs and labels lists
+    profiles = []
+    classes = []
+    names = []
+    for ID in IDs:
+      prof = pickle_get(path1.format(ID))
+      cls = pickle_get(path2.format(ID))
+      
+      for name in cls.keys():
+        names.append(name)
+        profiles.append(prof[name])
+        classes.append(cls[name])
+    
+    # DataFrame providing each image with a reference index
+    database = pd.DataFrame({'Path' : names, 'Data' : profiles, 'Class' : classes})
+    
+    pickle.dump(database, open('obsidian/datadump/database.pickle', 'wb'))
 
   def load_table(self, path):
     '''
@@ -346,6 +378,8 @@ def main(argv):
       train_kwargs['end'] = int(arg)
     elif opt=='--mode':
       mode = arg
+  
+  ProteinClassifier.make_database()
 
   PC = ProteinClassifier()
   PC.load_table('obsidian/datadump/database.pickle')

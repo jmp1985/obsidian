@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from obsidian.utils.imgdisp import ImgDisp
-from obsidian.learn.convnet import ProteinClassifier
+#from obsidian.learn.convnet import ProteinClassifier
 from sklearn.metrics import confusion_matrix
 
 def pickle_get(path):
@@ -29,8 +29,10 @@ def pickle_get(path):
 ###################################
 
 def load_and_save():
+  '''
+  '''
 # is ugly and needs fixing
-  blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1', 'a2', 'g1','f1')}
+  blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1','a2','g1','f1'), 6:('a1-2', 'a2-1')}
   IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
 
 # locations of input data and labels
