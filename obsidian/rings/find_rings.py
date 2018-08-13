@@ -1,18 +1,17 @@
 '''
 User implementation of obsidian. For loading, analysing data and flagging images with protein rings
 '''
-
-from keras.models import Sequential, load_model
+import os, sys, getopt, pickle, time
+from glob import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from keras.models import Sequential, load_model
 from obsidian.learn.metrics import precision
 from obsidian.utils.imgdisp import ImgDisp
-from obsidian.utils.data_handling import pickle_get, make_frame, split_data, join_files
+from obsidian.utils.data_handling import pickle_get, make_frame, split_data, join_files, read_header
 from obsidian.oimp.processor import Processor
-from obsidian.fex.extractor import FeatureExtractor as Fex
-import os, sys, getopt, pickle, time
-from glob import glob
+from obsidian.fex.extractor import FeatureExtractor as Fex, radius_from_res
 
 def find_rings(model, data_frame, show_top=10, display_top=False, classified=False):
   '''
@@ -56,8 +55,11 @@ def find_rings(model, data_frame, show_top=10, display_top=False, classified=Fal
       falses = sort.iloc[sort['Class'].values != np.rint(sort['Predicted'].values)]
       preds = sort['Predicted'].values
       plt.plot(plotx, preds, truesx, trues['Class'].values, 'g.', falsesx, falses['Class'].values, 'r.')
-
-def process(image_directories, background_files, IDs, direct, nangles=20, process=True, background=True):
+      print("Wrong images: \n", falses[['Path', 'Predicted']])
+      wrongs = ImgDisp([np.load(f) for f in falses['Path'].values])
+      wrongs.disp()
+      
+def process(image_directories, background_files, IDs, direct, nangles=20, process=False, background=False, max_res=7):
   '''
   Prepare data for classification buy running it through obsidian image processing and feature extraction functions
 
@@ -69,37 +71,62 @@ def process(image_directories, background_files, IDs, direct, nangles=20, proces
   :param bool process: if True, preprocess images before feature extraction
   :param bool backgroun: if True, perform background subtraction as part of image processing
   '''
-  
-  for folder, bg_file, ID in zip(image_directories, background_files, IDs):
-    print("Processing {}".format(ID))
-
-    bg = np.load(bg_file)
+  def do_the_processing():
+    '''
+    '''
+    if background:
+      bg = np.load(bg_file)
+    
     batched_files = split_data( glob(folder+'/*npy'), 150  )
     n = 0
+    # Extract header parameters
+    header = os.path.join(folder,'header.txt')
+    
+    # Determine max_radius in pixels for line data extraction
+    try:
+      rmax = radius_from_res(max_res, header)
+    except Exception as e:
+      print("Failed to extract necessary image parameters. Enter 'y' to continue program with following defaults: \nLambda: 0.96863 A \nDistance: 0.49906 m \nPixel size: 172e-6 m")
+      if input("Continue? [y/n]") != 'y':
+        print(e)
+        sys.exit('Program terminated')
+      else:
+        pass # exception handled 
     
     for files in batched_files:
       
       batchID = n
+      print("Loading batch...")
       data = {f : np.load(f) for f in files}
+      #nonlocal process
       if process:
-        process = Processor(data, bg)
-        process.rm_artifacts(value = 500)
+        p = Processor(data)
+        p.rm_artifacts(value = 500)
         if background:
-          process.background()
-        data = process.processedData
+          p.background(bg)
+        data = p.processedData
+        del p
       print("Extracting profiles from batch {}".format(n))
       fex = Fex(data)
-      fex.meanTraces(centre=(1318.37, 1249.65), rmax=400, nangles=nangles)
+      fex.meanTraces(centre=(1318.37, 1249.65), rmax=rmax, nangles=nangles)
       fex.dump_save(batchID, path=direct)
       
       del data
       del fex
-      del process
       n += 1
     
     paths = [ os.path.join(direct, '{}_profiles.pickle'.format(batch_nr)) for batch_nr in range(n) ]
     join_files( os.path.join(direct, '{}_profiles.pickle'.format(ID)), paths )
-
+  
+  if background:
+    assert background_files is not None, "Provide background files first"
+    for folder, bg_file, ID in zip(image_directories, background_files, IDs):
+      print("Processing {}".format(ID))
+      do_the_processing()
+  else:
+    for folder, ID in zip(image_directories, IDs):
+      print("Processing {}".format(ID))
+      do_the_processing()
 
 def main(argv):
   start = time.time()
@@ -109,7 +136,7 @@ def main(argv):
   kwargs = {}
   classified = False
   try:
-    opts, args = getopt.getopt(argv, 'a:c:b:p:')
+    opts, args = getopt.getopt(argv, 'a:cbp')
   except GetoptError as e:
     print(e)
     sys.exit(2)
@@ -118,11 +145,11 @@ def main(argv):
     if opt=='-a':
       kwargs['nangles'] = int(arg)
     if opt=='-b':
-      kwargs['background'] = bool(arg)
+      kwargs['background'] = True
     if opt=='-p':
-      kwargs['process'] = bool(arg)
+      kwargs['process'] = True
     if opt=='-c':
-      classified = bool(arg)
+      classified = True
 
   direct = 'pipe_test'
   if not os.path.exists(direct):
@@ -130,23 +157,21 @@ def main(argv):
 
   # Assume cbf_tp_np stage completed, image_directories should contain a list of folders
   # containing npy files
-  image_directories = ['/media/Elements/obsidian/diffraction_data/tray5/a2/grid']
+  image_directories = ['/media/Elements/obsidian/diffraction_data/180726/tray6/a2-1']
 
   #background_directories = ['/media/Elements/obsidian/diffraction_data/tray5/g1/grid']
-  background_files = ['obsidian/datadump/tray5_background.npy']
+  background_files = None 
 
   # IDs
-  IDs = ['T5a2']
-
-  # Data processing and feature extraction
-  process(image_directories, background_files, IDs, direct, **kwargs)
-  # Processed data now saved in <direct> as <ID>_profiles.pickle
-
-  classified = True
+  IDs = ['T6a2-1']
 
   print("Loading model")
   model = load_model('test-model.h5', custom_objects={'precision':precision})
 
+  # Data processing and feature extraction
+  process(image_directories, background_files, IDs, direct, **kwargs)
+  # Processed data now saved in <direct> as <ID>_profiles.pickle
+  
   if classified:
     data_dict = {'Data':[os.path.join(direct, '{}_profiles.pickle'.format(ID)) for ID in IDs],
                  'Class':['/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle'.format(ID) for ID in IDs]}
