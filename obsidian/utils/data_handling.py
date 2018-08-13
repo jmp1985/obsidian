@@ -45,6 +45,26 @@ def make_frame(datadict, classified=False):
   
   return df
 
+def read_header(f, params):
+  '''
+  Extract desired parameters from header file. Will not work correctly if params contain any spaces
+  
+  :param str f: header file path
+  :param list params: List of strings, each the name of a parameter found in the header
+  :return: dict of param:values where values is a list of all subsequent space separated strings
+
+  Example: read_header(<file>, ['Beam_xy', 'Detector_distance']) will return
+  {'Beam_xy' : ['(1251.51,', '1320.12)', 'pixels'], 'Detector_distance':['0.49906','m']}
+  '''
+  head = open(f, 'r')
+  info = {}
+  # Read header file line by line
+  for l in head:
+    if any(param in l for param in params):
+      p = [param for param in params if param in l][0]
+      info[p] = l.split(' ')[2:] # extract all info following parameter keyword
+  return info
+
 def rename(dir_name, root_name, which_data):
   d = dir_name
   #'obsidian/datadump'
