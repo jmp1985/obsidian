@@ -6,10 +6,10 @@ from obsidian.oimp.processor import Processor
 import matplotlib.pyplot as plt
 import skimage.io as skio
 from obsidian.utils.imgdisp import ImgDisp
-from obsidian.utils.data_handling import *
+from obsidian.utils.data_handling import pickle_get, pickle_put, join_files, split_data, read_header
 import os.path
 from obsidian.fex.trace import Trace
-from obsidian.fex.extractor import FeatureExtractor as Fex
+from obsidian.fex.extractor import FeatureExtractor as Fex, radius_from_res
 from glob import glob
 import pickle
 import gc
@@ -21,7 +21,8 @@ def fname(f):
   return os.path.splitext(os.path.basename(f))[0]
 
 def main1():
-  
+  '''
+  '''
   ##################
   #   directories  #
   ##################
@@ -118,7 +119,8 @@ def main1():
   plt.show()
 
 def main2():
-  
+  '''
+  '''
   ##################
   #   directories  #
   ##################
@@ -129,7 +131,6 @@ def main2():
 
   while not done:
     tray = input("Enter tray number (or press enter if done): ")
-    assert tray in ('1', '2', '4', '5', '')
     
     if tray == '':
       done = True
@@ -143,13 +144,13 @@ def main2():
     # read in background data  #
     ############################
       
-    print("Loading background data for tray {}...".format(tray_nr))
+    #print("Loading background data for tray {}...".format(tray_nr))
       
-    background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
+    #background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
     
     for well in trays[tray_nr]:
 
-      img_data_dir = '/media/Elements/obsidian/diffraction_data/tray{}/{}/grid'.format(tray_nr, well)
+      img_data_dir = '/media/Elements/obsidian/diffraction_data/180726/tray{}/{}'.format(tray_nr, well)
       assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
       ID = 'T{}{}'.format(tray_nr, well)
 
@@ -159,6 +160,16 @@ def main2():
       batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
       i = 0
       
+      max_res=7 #Angstrom
+
+      header = os.path.join(img_data_dir, 'header.txt')
+      params = ['Wavelength','Detector_distance','Pixel_size']
+      info = read_header(header, params)
+      wl = float(info['Wavelength'][0])
+      L = float(info['Detector_distance'][0])
+      pixel_size = float(info['Pixel_size'][0])
+      rmax = radius_from_res(wl, max_res, L, pixel_size)
+
       for files in batched_files: 
         
         batchID = batchIDs[i]
@@ -179,20 +190,20 @@ def main2():
         
         print("Pre-prossessing images...")
         
-        process = Processor(data, background)
+        process = Processor(data)
 
         process.rm_artifacts(value=500)
-        process.background()
-        
+        #process.background(background)
+        data = process.processedData
         ######################
         #  feature analysis  #
         ######################
         
         print("Extracting profiles...")
 
-        fex = Fex(process.processedData)
+        fex = Fex(data)
 
-        fex.meanTraces(centre=(1318.37, 1249.65), rmax=400, nangles=20)
+        fex.meanTraces(centre=(1318.37, 1249.65), rmax=rmax, nangles=20)
 
         ####################
         #    saving        #

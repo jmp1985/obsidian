@@ -8,14 +8,12 @@ Import cfb files and save raw data as npy array files. Additionally, specify a d
 ======================================
 !! This must be run in dials.python !!
 ======================================
-.. moduleauthor:: Fiona Young
 '''
 
 from dxtbx import load
 from dxtbx.format.FormatCBF import FormatCBF
 import numpy as np
-import glob 
-import os
+import glob, os, sys, getopt
 
 class Cbf2Np():
   '''
@@ -97,22 +95,32 @@ class Cbf2Np():
     files = glob.glob(bg_dir+'.*cbf')
     print(files) 
     for f in files:
-      print(f)
       img = load(f)
       bgData.append(img.get_raw_data().as_numpy_array())
       
     bgData = np.dstack(bgData)
     bgMean = np.mean(bgData, axis=2)
 
-    np.save(self.dest+"background.npy", bgMean, allow_pickle=False)
+    np.save(os.path.join(self.dest,"background.npy"), bgMean, allow_pickle=False)
 
-if __name__ == '__main__':
+def main(argv):
+  
+  data_root = ''
+  data_dest = ''
 
-  # root data directory
-  data_root = '/dls/mx-scratch/adam-vmxm'
-
-  # destination directory
-  data_dest = '/media/Elements/obsidian/diffraction_data'
+  try:
+    opts, args = getopt.getopt(argv, 'h', ['root=', 'dest='])
+  except getopt.GetoptError as e:
+    print(e)
+    print("cbf_to_npy.py --root <directory containing cbf files (incl subdirs)> --dest <directory to store npy files in>")
+    sys.exit(2)
+  for opt, arg in opts:
+    if opt=='--root':
+      data_root = arg
+    if opt=='--dest':
+      data_dest = arg
+  
+  assert os.path.exists(data_root), "Invalid data root directory"
   assert os.path.exists(data_dest), "Invalid destination path"
 
   # instantiate
@@ -123,3 +131,8 @@ if __name__ == '__main__':
 
   # background data, saved as single averaged file
   #do_thing.read_bg_directory("data/realdata/tray2/g1/grid/")
+
+if __name__ == '__main__':
+  main(sys.argv[1:])
+
+  
