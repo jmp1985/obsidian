@@ -3,6 +3,7 @@ Module of Classes and methods for building, training and handling classification
 '''
 
 import sys, getopt
+from glob import glob
 from keras.models import Sequential, load_model
 from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 from keras.optimizers import Adam
@@ -52,15 +53,38 @@ class ProteinClassifier():
   def make_database():
     '''
     '''
+    
+    data_folder = 'obsidian/datadump/{}_profiles.pickle'
+    label_folder = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle'
+    pre, suf = data_folder.split('{}')
+    IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))]
+    
+    data = []
+    labels = []
+    paths = []
+    for ID in IDs:
+      d = pickle_get(data_folder.format(ID))
+      try:
+        l = pickle_get(label_folder.format(ID))
+        for file_path in d.keys():
+          paths.append(file_path)
+          data.append(d[file_path])
+          labels.append(l[file_path])
+      except IOError:
+        print("No labels found for {}, skipping".format(ID))
+    database = pd.DataFrame({'Path':paths, 'Data':data, 'Class':labels})
+
+   
+    '''
     # is ugly and needs fixing
-    blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1','a2','g1','f1'), 6:('a1-2', 'a2-1', 'a3')}
+    blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1','a2','g1','f1'), 6:('a1-2new', 'a2-1new', 'a3new')}
     IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
 
     # Locations of input data and labels
     path1 = 'obsidian/datadump/{}_profiles.pickle'
-    path2 = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle' 
-
+    path2 = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle'
     print("Gathering data...")
+    
     # Populate inputs and labels lists
     profiles = []
     classes = []
@@ -76,7 +100,8 @@ class ProteinClassifier():
     
     # DataFrame providing each image with a reference index
     database = pd.DataFrame({'Path' : names, 'Data' : profiles, 'Class' : classes})
-    
+    '''
+
     pickle.dump(database, open('obsidian/datadump/database.pickle', 'wb'))
 
   def load_table(self, path):
@@ -131,7 +156,7 @@ class ProteinClassifier():
     :return: created and compiled keras model
     '''
     kernel_sizes = np.linspace(min_kern_size, max_kern_size, nlayers, dtype=int)
-    nfilters = np.linspace(20, 40, nlayers, dtype=int)
+    nfilters = np.linspace(30, 50, nlayers, dtype=int)
     
     model = Sequential()
 
@@ -211,11 +236,6 @@ class ProteinClassifier():
     self.show_confusion(cm, [0,1])
 
     self.plot_test_results()
-
-    '''
-    indexed_test = indexed_data[self.split:]
-    wrong_predictions = indexed_test[ predicted != indexed_test[:,-1]]
-    '''
 
   def grid_search(self, batch_size=20, epochs=30, end=-1):
     '''
@@ -324,7 +344,7 @@ class ProteinClassifier():
     plt.xlabel('Predicted class')
     plt.ylabel('True class')
     
-  def show_wrongs(self, wrongs, wrong_predictions, probs):
+  def show_wrongs(self):
     '''
     Display wongly classified images together with their true class and predicted class probability
 
@@ -332,10 +352,11 @@ class ProteinClassifier():
     :param wrong_predications: predicted classes
     :param probs: predicted probabilities
     '''
+    wrongs = self.test_data.iloc[self.test_data['Class'].values != np.rint(self.test_data['Prediction'].values)]
     num = len(wrongs)
-    wrongs = ImgDisp(wrongs)
+    w = ImgDisp([np.load(f) for f in wrongs['Path'].values][:10])
 
-    fig1, ax1 = wrongs.disp()
+    fig1, ax1 = w.disp()
     fig1.subplots_adjust(wspace=0.02, hspace=0.02)
 
     try:
@@ -343,16 +364,18 @@ class ProteinClassifier():
         ax1.flat[i].set_title((str(wrong_predictions[i,-1])+' '+str(probs[i])))
     except Exception as e:
       print("Couldn't label plots: \n", e)
+    
+    print(wrongs[['Path','Class','Prediction']])
 
 def main(argv):
 
   build_kwargs = {}
   train_kwargs = {}
   mode='normal_testing'
-  
+  remake = False
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:o:', ['mode='])
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:o:', ['mode=', 'remake'])
   except getopt.GetoptError as e:
     print(e)
     print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
@@ -378,8 +401,11 @@ def main(argv):
       train_kwargs['end'] = int(arg)
     elif opt=='--mode':
       mode = arg
+    elif opt=='--remake':
+      remake = True
   
-  ProteinClassifier.make_database()
+  if remake:
+    ProteinClassifier.make_database()
 
   PC = ProteinClassifier()
   PC.load_table('obsidian/datadump/database.pickle')
@@ -395,6 +421,7 @@ def main(argv):
     PC.massage()
     PC.model_from_save()
     PC.test_model()
+    PC.show_wrongs()
   else:
     PC.build_model(**build_kwargs)
     PC.train_model(**train_kwargs)

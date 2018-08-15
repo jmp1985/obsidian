@@ -80,7 +80,7 @@ def rename(dir_name, root_name, which_data):
     well = ID[2:]
     folder = os.path.join(r, 'tray{}'.format(tray_nr), well, 'grid')
 
-    for key, item in data.items():
+    for key in list(data.keys()):
       new_key = os.path.join(folder, os.path.basename(key))
       data[new_key] = data.pop(key)
 
@@ -89,12 +89,11 @@ def rename(dir_name, root_name, which_data):
 def add_npy_ext(d, pattern):
   for f in glob(os.path.join(d, '*{}'.format(pattern))):
     data = zapickle.load(open(f, 'rb'))
-    for key, item in data.items():
+    for key in list(data.keys()):
       if not key.endswith('.npy'):
         new_key=key+'.npy'
         data[new_key] = data.pop(key)
     pickle.dump(data, open(f, 'wb'))
-
 
 def main1():
   

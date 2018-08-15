@@ -7,6 +7,8 @@ from scipy.ndimage import map_coordinates
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
+
+from time import time
 class Trace():
   '''
   Trace extraction and manipulation class
@@ -32,8 +34,9 @@ class Trace():
     else:
       self.cent = centre
       
-    if rmax is None:
+    if rmax is None or rmax > self.w or rmax > self.h:
       self.rmax = min(*self.cent, self.w-self.cent[1], self.h-self.cent[0])
+      print("Warning: rmax either not specified or exeeded image dimensions. ramx set to half maximum image dimension.")
     else:
       self.rmax = rmax
     
@@ -59,7 +62,7 @@ class Trace():
     return np.vstack((r, c))
 
   def readTrace(self, line, img):
-    ''' 
+    '''
     Extract image values along a single line
 
     :param np.array line: line coordinates as 2d np array
@@ -67,7 +70,8 @@ class Trace():
     :returns: line coordinates and image values along line
     '''
     # extract image values along line using bilinear interpolation
-    vals = map_coordinates(img, line, order=3)
+    #vals = map_coordinates(img, line, order=2)
+    vals = img[line[0,:].astype(np.int), line[1,:].astype(np.int)]
     return vals
   
   def meanTrace(self, img):
@@ -77,13 +81,10 @@ class Trace():
     :param img: input image
     :returns: individual traces and mean trace values 
     '''
-    traces = []
-    
-    for line in self.lines:
-      traces.append(self.readTrace(line, img))
-    
+    #time this
+
+    traces = [self.readTrace(line, img) for line in self.lines]
     meanVals = np.mean(traces, axis = 0)
-    
     return traces, meanVals
 
   def display(self, img, traces, meanVals):
@@ -107,7 +108,7 @@ class Trace():
     # overlay figure with lines indicating profiles
     for line in self.lines:
       print(line)
-      axes[0].plot(line[0][1], line[0][0], 'r')
+      axes[0].plot(line[1], line[0], 'r-')
     
     # plot mean trace below figure
     axes[1].plot(meanVals)

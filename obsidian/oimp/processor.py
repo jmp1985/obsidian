@@ -1,9 +1,7 @@
 '''
+Processor module for image processing
 '''
 
-from obsidian.oimp.sbtr_bg import Sbtr_bg
-import cv2
-from skimage import img_as_ubyte, exposure, restoration
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
@@ -12,11 +10,15 @@ import os
 class Processor():
   '''
   Class encapsulating all image processing, to produce data that can be passed onto the feature extraction stage of Obsidian.
+  
+  :ivar dict collection: images to be processed in form {filepath : image array}
+  :ivar dict processedData: storage dict for processed images
+  :ivar array bg: 
   '''
   
   def __init__(self, coll, background=None):
     '''
-    :param collection: dict of filename : image pairs to be processed
+    :param collection: dict of filepath : image pairs to be processed
     '''
     self.collection = coll
     self.processedData = coll
@@ -31,8 +33,11 @@ class Processor():
     '''
     assert self.bg is not None or bg is not None, "No background image provided"
     
-    sbtrbg = Sbtr_bg(self.bg) if bg is None else Sbtr_bg(bg)
-    self.processedData = sbtrbg.subtract(self.processedData)
+    bg = self.bg if bg is None else bg
+
+    for name, f in self.processedData:
+      assert (f.shape == bg.shape), "Background subtraction: images must be equal size!"
+      self.processedData[name] = (np.subtract(f, bg))
   
   def rm_artifacts(self, value=600):
     '''
@@ -46,20 +51,6 @@ class Processor():
     if self.bg is not None:
       self.bg[self.bg > value] = -1
 
-  def correct_and_filter(self):
-    '''
-    Adjust contrast and noise levels in images
-    '''
-    for name, img in self.processedData.items():
-
-      img = exposure.adjust_log(exposure.rescale_intensity(img,
-      out_range=(0,1000)), gain=2)
-      img = restoration.denoise_tv_chambolle(img, weight=0.2)
-      
-    fig, ax = plt.subplots()
-    ax.imshow(list(self.processedData.values())[5], cmap='binary', interpolation='nearest')
-    return fig, ax
-    
   def dump_save(self, ID, path='default'):
     '''
     Save processed images to pickle file

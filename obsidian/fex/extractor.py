@@ -11,6 +11,12 @@ import math
 from obsidian.utils.data_handling import read_header
 
 def get_params(header):
+    '''
+    Return image parameters necessary for calculating a radius in pixels from a given resolution
+
+    :param str header: filepath for header.txt file, containing all image parameters 
+    :returns: wavelength, detector distance, pixel size
+    '''
     fields = ['Wavelength', 'Detector_distance', 'Pixel_size']
     defaults = False
     try:
@@ -47,6 +53,9 @@ def radius_from_res(max_res, header):
   return r/pixel_size # Radius in pixels
 
 class FeatureExtractor():
+  '''
+  Feature extraction tool, for extracting mean traces for 
+  '''
   
   def __init__(self, preparedData):
     '''
@@ -55,7 +64,7 @@ class FeatureExtractor():
     self.data = preparedData
     self.profiles = {}
   
-  def meanTraces(self, centre, rmax, nangles):
+  def meanTraces(self, rmax, nangles, centre=None):
     '''
     Calculate mean trace vectors for all images in self.data
 
@@ -68,16 +77,10 @@ class FeatureExtractor():
 
       meanTraces() is computationally expensive. Select a low nangles value for testing purposes
     '''
-    import time
-    start = time.time()
     angles = np.linspace(89, -89, nangles)
-    image_shape = list(self.data.values())[0].shape
     for name, img in self.data.items():
-      tr = Trace(image_shape, angles, centre, rmax)
+      tr = Trace(img.shape, angles, centre, rmax)
       self.profiles[name] = tr.meanTrace(img)[1]
-    
-    secs=time.time()-start
-    print("Mean trace extraction: {}:{}min".format(secs//60, secs%60))
     return self.profiles
     
   def dump_save(self, ID, path='default'):
