@@ -205,7 +205,9 @@ def main(argv):
       kwargs['box'] = True
   
   assert os.path.exists(data_root), "Invalid data root directory"
-  assert os.path.exists(data_dest), "Invalid destination path"
+  if not os.path.exists(data_dest):
+    os.makedirs(data_dest)
+
 
   # instantiate
   do_thing = Cbf2Np(data_root, data_dest, **kwargs)
