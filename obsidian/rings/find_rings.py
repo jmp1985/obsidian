@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from keras.models import Sequential, load_model
-from obsidian.learn.metrics import precision
+from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, make_frame, split_data, join_files, read_header
 from obsidian.oimp.processor import Processor
@@ -29,7 +29,7 @@ def find_rings(model, data_frame, show_top=10, display_top=False, classified=Fal
   predictions = model.predict_proba(np.expand_dims(x, 2))
   data_frame['Predicted'] = predictions
   
-  if max(predictions)>0.5:
+  if max(predictions) > 0.5:
     print("Rings found!")
     print('in ',np.array(predictions > 0.5).sum(),' images out of ',len(predictions))
   
@@ -42,8 +42,10 @@ def find_rings(model, data_frame, show_top=10, display_top=False, classified=Fal
   if display_top:
     pd.set_option('max_colwidth', -1)
     print("Top {} images:".format(show_top))
-    print(top[['Path','Predicted']])
-    display = ImgDisp([np.load(f) for f in top['Path'].values])
+    print(sort[['Path','Predicted']].iloc[:show_top])
+    display = ImgDisp([np.load(f) for f in sort['Path'].values].iloc[:show_top])
+    print("Borderline images:")
+    print(sort.iloc[np.rint(sort['Predicted'].values) == 1].iloc[-5:])
     display.disp()
 
     if classified:
@@ -69,7 +71,7 @@ def process(image_directories, background_files, IDs, direct, nangles=20, proces
   :param str direct: destination folder for intermediate processing files
   :param int nangles: number of line profiles to extract from each image
   :param bool process: if True, preprocess images before feature extraction
-  :param bool backgroun: if True, perform background subtraction as part of image processing
+  :param bool background: if True, perform background subtraction as part of image processing
   '''
   def do_the_processing():
     '''
@@ -98,7 +100,6 @@ def process(image_directories, background_files, IDs, direct, nangles=20, proces
       batchID = n
       print("Loading batch...")
       data = {f : np.load(f) for f in files}
-      #nonlocal process
       if process:
         p = Processor(data)
         p.rm_artifacts(value = 500)
@@ -108,7 +109,7 @@ def process(image_directories, background_files, IDs, direct, nangles=20, proces
         del p
       print("Extracting profiles from batch {}".format(n))
       fex = Fex(data)
-      fex.meanTraces(centre=(1318.37, 1249.65), rmax=rmax, nangles=nangles)
+      fex.meanTraces( rmax=rmax, nangles=nangles)
       fex.dump_save(batchID, path=direct)
       
       del data
@@ -157,16 +158,16 @@ def main(argv):
 
   # Assume cbf_tp_np stage completed, image_directories should contain a list of folders
   # containing npy files
-  image_directories = ['/media/Elements/obsidian/diffraction_data/180726/tray6/a2-1']
+  image_directories = ['/media/Elements/obsidian/diffraction_data/180726_small/tray1/a5']
 
   #background_directories = ['/media/Elements/obsidian/diffraction_data/tray5/g1/grid']
-  background_files = None 
+  background_files = ['/dls/science/users/ywl28659/obsidian/obsidian/datadump/180726_smalltray1a5_background.npy']
 
   # IDs
-  IDs = ['T6a2-1']
+  IDs = ['180726_smalltray1a5']
 
   print("Loading model")
-  model = load_model('test-model.h5', custom_objects={'precision':precision})
+  model = load_model('obsidian/datadump/test-model.h5', custom_objects={'precision':precision, 'my_loss':weighted_binary_crossentropy})
 
   # Data processing and feature extraction
   process(image_directories, background_files, IDs, direct, **kwargs)

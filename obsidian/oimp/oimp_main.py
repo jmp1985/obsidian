@@ -34,7 +34,7 @@ def get_img_dirs(root):
   for dirname, subdirList, fileList in os.walk(root, topdown=False):
     if len(subdirList)==0:
       ID = ''.join(dirname.split(os.sep)[-3:])
-      tray = ''.join(dirname.splot(os.sep)[-4:-2])
+      tray = ''.join(dirname.split(os.sep)[-4:-2])
       bottom_dirs[dirname] = {'ID':ID, 'tray':tray}
       
   return bottom_dirs
@@ -55,14 +55,27 @@ def main1():
   ############################
   # read in background data  #
   ############################
-    
-  #print("Loading background data for tray {}...".format(tray))
-  tray = bottom_dirs[img_data_dir]['tray']
-  #background = np.load('obsidian/datadump/{}_background.npy'.format(tray))
-  
+     
     assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
     ID = bottom_dirs[img_data_dir]['ID']
-    print("Working on {}...".format(ID))
+    tray = bottom_dirs[img_data_dir]['tray']
+    print("Working on {}...".format(ID))  
+    print("Loading background data for tray {}...".format(tray))
+    
+    if os.path.exists('obsidian/datadump/with-background/{}_profiles.pickle'.format(ID)):
+      print("{} already processed, skippig".format(ID))
+      continue
+
+    try:
+      background = np.load('obsidian/datadump/{}_background.npy'.format(tray))
+    except IOError:
+      print("No background file found for {}".format(tray))
+      try:
+        background = np.load('obsidian/datadump/{}_background.npy'.format(ID))
+      except IOError:
+        print("No background file found for {}, skipping folder".format(ID))
+        continue # Skip processing and proceed to next folder
+        
 
     batched_files = split_data( glob(img_data_dir+'/*.npy'), 150 ) # batch size of 150
     print([len(l) for l in batched_files])
@@ -95,10 +108,10 @@ def main1():
       
       print("Pre-prossessing images...")
       
-      process = Processor(data)
+      process = Processor(data,background)
 
       process.rm_artifacts(value=500)
-      process.background(background)
+      process.background()
       data = process.processedData
       ######################
       #  feature analysis  #
@@ -108,7 +121,7 @@ def main1():
 
       fex = Fex(data)
 
-      fex.meanTraces(centre=(1313.37, 1262.97), rmax=rmax, nangles=20)
+      fex.meanTraces(rmax=rmax, nangles=20)
 
       ####################
       #    saving        #
