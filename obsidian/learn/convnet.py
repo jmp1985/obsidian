@@ -54,8 +54,8 @@ class ProteinClassifier():
     '''
     '''
     
-    data_folder = 'obsidian/datadump/{}_profiles.pickle'
-    label_folder = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle'
+    data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
+    label_folder = '/media/Elements/obsidian/diffraction_data/classes/small/{}_classifications.pickle'
     pre, suf = data_folder.split('{}')
     IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))]
     
@@ -161,7 +161,7 @@ class ProteinClassifier():
     model = Sequential()
 
     # Input layer
-    model.add(Conv1D(filters = nfilters[0], kernel_size=kernel_sizes[0].item(), padding=padding, activation='relu', input_shape=(2463, 1)))
+    model.add(Conv1D(filters = nfilters[0], kernel_size=kernel_sizes[0].item(), padding=padding, activation='relu', input_shape=(2000, 1)))
     model.add(MaxPooling1D())
     model.add(Dropout(0.3))
 
@@ -272,7 +272,7 @@ class ProteinClassifier():
     :param history: keras history object containing metric info from training
     '''
     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, nrows=1)
-    
+    fig.dpi = 300 
     ax1.plot(history['loss'], label = 'train', color = '#73ba71')
     ax1.plot(history['val_loss'], label = 'validation', color = '#5e9ec4')
     ax1.set_xlabel('epoch')
@@ -303,7 +303,7 @@ class ProteinClassifier():
     falsex = np.where(sort['Class'] != np.rint(sort['Prediction']))[0]
     falses = sort.iloc[sort['Class'].values != np.rint(sort['Prediction'].values)]
     
-    plt.figure()
+    plt.figure(dpi=300)
     plt.plot(x, preds, truex, trues['Class'].values, 'g.', falsex, falses['Class'].values, 'r.') 
 
   def show_confusion(self, cm, classes):
@@ -326,7 +326,7 @@ class ProteinClassifier():
     print(stats)
 
     # Plot
-    plt.figure()
+    plt.figure(dpi=300)
     try:
       plt.imshow(cm, interpolation='nearest', cmap='magma_r')
     except Exception as e:

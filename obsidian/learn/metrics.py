@@ -20,7 +20,7 @@ def precision(y_true, y_pred):
 
 def weighted_binary_crossentropy(weight, from_logits=False):
   
-  def loss(target, output):
+  def my_loss(target, output):
     # Not entirely sure what this is for but it was in the Keras backend method
     if from_logits:
       output = nnet.sigmoid(output)
@@ -28,5 +28,5 @@ def weighted_binary_crossentropy(weight, from_logits=False):
     # Modified log loss equation with weight for target positive 
     return -(weight * target * T.log(output) + (1.0 - target) * T.log(1.0 - output))
   
-  return loss
+  return my_loss
   
