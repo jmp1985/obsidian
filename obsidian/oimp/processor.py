@@ -35,7 +35,7 @@ class Processor():
     
     bg = self.bg if bg is None else bg
 
-    for name, f in self.processedData:
+    for name, f in self.processedData.items():
       assert (f.shape == bg.shape), "Background subtraction: images must be equal size!"
       self.processedData[name] = (np.subtract(f, bg))
   

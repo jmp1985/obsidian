@@ -29,7 +29,7 @@ class Trace():
     self.h = image_shape[0] # image height is number of rows
     
     if centre is None:
-      assert(image_shape[0]==image_shape[1]), "image must be square if centre coordinates not specified"
+      #assert(image_shape[0]==image_shape[1]), "image must be square if centre coordinates not specified"
       self.cent = (self.h/2, self.w/2)
     else:
       self.cent = centre
@@ -56,7 +56,7 @@ class Trace():
     r0, c0 = self.cent[0]+y0, self.cent[1]-x0 # start row and column in pixel coordinates
     r1, c1 = self.cent[0]-y0, self.cent[1]+x0 # end row and column in pixel coordinates
 
-    num = self.w # number of points on line
+    num = 2000 # number of points on line
     r, c = np.linspace(r0, r1, num), np.linspace(c0, c1, num)
     # return line coordinates 
     return np.vstack((r, c))
@@ -97,22 +97,22 @@ class Trace():
     :return: pyplot figure and axes objects
     '''
     # set up figure gridspace and axes
-    fig = plt.figure()
+    fig = plt.figure(dpi=300)
     gs = GridSpec(len(traces),2)
     axes = [plt.subplot(gs[0:-4,0]),
     plt.subplot(gs[-4:,0])]+[plt.subplot(gs[i,1]) for i in range(len(traces))]
     
     # show figure in first axis
-    axes[0].imshow(img, cmap='binary', interpolation='nearest', vmin=-1, vmax=300)
-    
+    axes[0].imshow(img, cmap='binary', interpolation='nearest', vmin=-1, vmax=200)
+    axes[0].set_axis_off() 
     # overlay figure with lines indicating profiles
     for line in self.lines:
       print(line)
-      axes[0].plot(line[1], line[0], 'r-')
+      axes[0].plot(line[1], line[0], linewidth=0.3, color='#5e9ec4')
     
     # plot mean trace below figure
-    axes[1].plot(meanVals)
-
+    axes[1].plot(meanVals, linewidth=0.2, color='#5e9ec4')
+    axes[1].set_axis_off()
     # plot trace values
     for i in range(len(traces)):
       axes[i+2].plot(traces[i])

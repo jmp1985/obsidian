@@ -37,7 +37,8 @@ class ImgDisp():
     :returns: fig, axes
     '''
     fig, axes = plt.subplots(self.shape[0], self.shape[1])
-    
+    fig.dpi=300
+
     for i in range(len(self.collection)):
       axes.flat[i].imshow(self.collection[i], cmap='binary',
                           interpolation='nearest', vmin=-1,
