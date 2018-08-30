@@ -6,18 +6,18 @@ from user input (exactly how differs between main1 and main2) and the
 files are then passed through Processor and FeatureExtractor objects respectively, and the resulting
 data dictionaries of form {imagepath:mean_profile_data} are saved to pickle files named with IDs
 '''
+import os, os.path
+from glob import glob
+import pickle
 import numpy as np
-from obsidian.oimp.processor import Processor
 import matplotlib.pyplot as plt
 import skimage.io as skio
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put, join_files, split_data, read_header
-import os, os.path
+from obsidian.utils.bg_from_blanks import build_bg_files
 from obsidian.fex.trace import Trace
 from obsidian.fex.extractor import FeatureExtractor as Fex, radius_from_res
-from glob import glob
-import pickle
-import gc
+from obsidian.oimp.processor import Processor
 
 def fname(f):
   '''
@@ -39,17 +39,18 @@ def get_img_dirs(root):
       
   return bottom_dirs
 
-def main1():
+def pipe(top, dump_path, max_res):
   '''
   This version takes a single top level directory as input and processes all nested files.
-  IDs are derived from directory paths
+  IDs are derived from directory paths. Background files are created if not already existing
   '''
   ##################
   #   directories  #
   ##################
   
 
-  bottom_dirs = get_img_dirs(input("Enter top level directory: "))
+  bottom_dirs = get_img_dirs(top)
+  build_bg_files(top, dump_path)
 
   for img_data_dir in bottom_dirs.keys():
   ############################
@@ -60,30 +61,30 @@ def main1():
     ID = bottom_dirs[img_data_dir]['ID']
     tray = bottom_dirs[img_data_dir]['tray']
     print("Working on {}...".format(ID))  
-    print("Loading background data for tray {}...".format(tray))
     
-    if os.path.exists('obsidian/datadump/with-background/{}_profiles.pickle'.format(ID)):
-      print("{} already processed, skippig".format(ID))
+    if os.path.exists(os.path.join(dump_path, '{}_profiles.pickle'.format(ID))):
+      print("\t{} already processed, skipping".format(ID))
       continue
 
+    print("\tLooking for background data for tray {}...".format(tray))
+
     try:
-      background = np.load('obsidian/datadump/{}_background.npy'.format(tray))
+      background = np.load(os.path.join(dump_path,'{}_background.npy'.format(tray)))
     except IOError:
-      print("No background file found for {}".format(tray))
+      print("\t\tNo background file found for {}".format(tray))
       try:
-        background = np.load('obsidian/datadump/{}_background.npy'.format(ID))
+        background = np.load(os.path.join(dump_path, '{}_background.npy'.format(ID)))
       except IOError:
-        print("No background file found for {}, skipping folder".format(ID))
+        print("\t\tNo background file found for {}, skipping folder".format(ID))
         continue # Skip processing and proceed to next folder
-        
+    
+    print("\tBackground data loaded")
 
     batched_files = split_data( glob(img_data_dir+'/*.npy'), 150 ) # batch size of 150
-    print([len(l) for l in batched_files])
 
     batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
     i = 0
     
-    max_res=7 #Angstrom
 
     header = os.path.join(img_data_dir, 'header.txt')
     rmax = radius_from_res(max_res, header)
@@ -91,60 +92,52 @@ def main1():
     for files in batched_files: 
       
       batchID = batchIDs[i]
-      print('Batch nr: ', i)
+      print('\tBatch nr: ', i)
       
-      ######################
-      # read in data files #
-      ######################
+      ############## read in data files ###############
       
-      print("Loading image data...") 
+      print("\t\tLoading image data...") 
 
       data = {f : np.load(f) for f in files}
       names = list(data.keys())
       
-      ##################
-      #   processing   #
-      ##################
+      ############   processing   ############
       
-      print("Pre-prossessing images...")
+      print("\t\tPre-prossessing images...")
       
-      process = Processor(data,background)
+      process = Processor(data, background)
 
       process.rm_artifacts(value=500)
       process.background()
       data = process.processedData
-      ######################
-      #  feature analysis  #
-      ######################
+
+      ##############  feature analysis  ##############
       
-      print("Extracting profiles...")
+      print("\t\tExtracting profiles...")
 
       fex = Fex(data)
 
       fex.meanTraces(rmax=rmax, nangles=20)
 
-      ####################
-      #    saving        #
-      ####################
+      ############# saving ##############
       
       #print("Saving...")
       #process.dump_save(ID)
 
-      print("Saving profiles to datadump/{}_profiles.pickle...".format(batchID))
-      fex.dump_save(batchID)
+      print("\t\tSaving profiles to {}/{}_profiles.pickle...".format(dump_path, batchID))
+      fex.dump_save(batchID, dump_path)
       
       del data
       del fex
       del process
       i += 1
 
-    ################
-    # join batches #
-    ################
+    ############# join batches #############
 
-    paths = ['obsidian/datadump/{}_profiles.pickle'.format(batchID) for batchID in batchIDs]
-    join_files('obsidian/datadump/with-background/{}_profiles.pickle'.format(ID), paths)
+    paths = [os.path.join(dump_path, '{}_profiles.pickle'.format(batchID)) for batchID in batchIDs]
+    join_files(os.path.join(dump_path, '{}_profiles.pickle'.format(ID)), paths)
 
+# obsolete
 def main2():
   '''
   '''
@@ -251,5 +244,7 @@ def main2():
       join_files('obsidian/datadump/{}new_profiles.pickle'.format(ID), paths)
 
 if __name__ == '__main__':
-  main1()
-
+  top = input("Enter top level directory: ")
+  dump_path = 'obsidian/datadump/with-background'
+  max_res = 7 #Angstrom
+  pipe(top, dump_path, max_res)
