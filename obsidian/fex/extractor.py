@@ -83,14 +83,18 @@ class FeatureExtractor():
       self.profiles[name] = tr.meanTrace(img)[1]
     return self.profiles
     
-  def dump_save(self, ID, path='default'):
+  def dump_save(self, ID, path=None):
     '''
-    Save extracted data to pickle file in obsidian/datadump
+    Save extracted data to pickle file in obsidian/datadump or specified path
 
     :param str ID: data batch label for later identification
     '''
-    
-    path = os.path.join('obsidian/datadump' if path == 'default' else path, "{}_profiles.pickle".format(ID))
+    default = 'obsidian/datadump'
+    if not os.path.exists(default) and path is None:
+      os.makedirs(default)
+
+    path = os.path.join(default if path is None else path, 
+                        "{}_profiles.pickle".format(ID))
 
     profiles_save = open(path, "wb")
     pickle.dump(self.profiles, profiles_save)

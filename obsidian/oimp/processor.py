@@ -26,7 +26,7 @@ class Processor():
     
   def background(self, bg=None):
     '''
-    Implement the :class:`Sbtr_bg` class to remove a background from image collection
+    Remove a background from image collection
     
     :param background: to be removed (provide only if not specified on instantiation)
     :returns: modified files
@@ -51,18 +51,20 @@ class Processor():
     if self.bg is not None:
       self.bg[self.bg > value] = -1
 
-  def dump_save(self, ID, path='default'):
+  def dump_save(self, ID, path=None):
     '''
     Save processed images to pickle file
 
     :param str ID: identification label
     '''
-    path = os.path.join('obsidian/datadump' if path == 'default' else path, "{}_processed.pickle".format(ID))
-    
-    print("Pickling...")
 
+    default = 'obsidian/datadump'
+    if not os.path.exists(default) and path is None:
+      os.makedirs(default)
+
+    path = os.path.join(default if path is None else path, 
+                        "{}_proscessed.pickle".format(ID))
+  
     data_save = open(path, "wb")
     pickle.dump(self.processedData, data_save, protocol=-1)
     data_save.close()
-
-    print("Pickled!")
