@@ -2,23 +2,26 @@
 Module of Classes and methods for building, training and handling classification models
 '''
 
+# Basic packages
 import sys, getopt
 from glob import glob
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import pickle
+# Machine learning
 from keras.models import Sequential, load_model
 from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, Dropout
 from keras.optimizers import Adam
 from keras.wrappers.scikit_learn import KerasClassifier
-import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
 from sklearn.model_selection import GridSearchCV
-import itertools
+# Obsidian modules
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
-import pandas as pd
-import pickle
 
 class ProteinClassifier():
   '''
@@ -52,6 +55,8 @@ class ProteinClassifier():
   @staticmethod
   def make_database():
     '''
+    Load data and classes out of relevant folders and store in a data frame along with
+    file path for each image
     '''
     
     data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
@@ -73,35 +78,7 @@ class ProteinClassifier():
       except IOError:
         print("No labels found for {}, skipping".format(ID))
     database = pd.DataFrame({'Path':paths, 'Data':data, 'Class':labels})
-
-   
-    '''
-    # is ugly and needs fixing
-    blocks = {1:( 'a2', 'a4','a6', 'a8', 'g1'), 2:('a4','a5','a7', 'a1', 'a2', 'a3','a8', 'g1'), 4:('a1-2','a2', 'a3', 'a4','a5', 'f1',), 5:('a1','a2','g1','f1'), 6:('a1-2new', 'a2-1new', 'a3new')}
-    IDs = ['T{}{}'.format(tray, well) for tray in blocks.keys() for well in blocks[tray]]
-
-    # Locations of input data and labels
-    path1 = 'obsidian/datadump/{}_profiles.pickle'
-    path2 = '/media/Elements/obsidian/diffraction_data/classes/{}_classifications.pickle'
-    print("Gathering data...")
     
-    # Populate inputs and labels lists
-    profiles = []
-    classes = []
-    names = []
-    for ID in IDs:
-      prof = pickle_get(path1.format(ID))
-      cls = pickle_get(path2.format(ID))
-      
-      for name in cls.keys():
-        names.append(name)
-        profiles.append(prof[name])
-        classes.append(cls[name])
-    
-    # DataFrame providing each image with a reference index
-    database = pd.DataFrame({'Path' : names, 'Data' : profiles, 'Class' : classes})
-    '''
-
     pickle.dump(database, open('obsidian/datadump/database.pickle', 'wb'))
 
   def load_table(self, path):
@@ -143,7 +120,9 @@ class ProteinClassifier():
     print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
-  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, dropout=0.3, padding='same', loss='binary_crossentropy', loss_weight=0.5):
+  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, 
+                  dropout=0.3, padding='same', 
+                  loss='binary_crossentropy', loss_weight=0.5):
     '''
     Construct and compile a keras Sequential model according to spec
 
@@ -161,12 +140,14 @@ class ProteinClassifier():
     model = Sequential()
 
     # Input layer
-    model.add(Conv1D(filters = nfilters[0], kernel_size=kernel_sizes[0].item(), padding=padding, activation='relu', input_shape=(2000, 1)))
+    model.add(Conv1D(filters = nfilters[0], kernel_size=kernel_sizes[0].item(), 
+                     padding=padding, activation='relu', input_shape=(2000, 1)))
     model.add(MaxPooling1D())
     model.add(Dropout(0.3))
 
     for i in range(1,nlayers):
-      model.add(Conv1D(filters=nfilters[i], kernel_size=kernel_sizes[i].item(), padding=padding, activation='relu'))
+      model.add(Conv1D(filters=nfilters[i], kernel_size=kernel_sizes[i].item(), 
+                       padding=padding, activation='relu'))
       model.add(MaxPooling1D())
       model.add(Dropout(dropout))
 
@@ -201,10 +182,12 @@ class ProteinClassifier():
     self.massage()
     self.print_summary()
 
-    self.history = self.model.fit(self.X_train[:end], self.y_train[:end], validation_data=(self.X_test, self.y_test), epochs=epochs, batch_size=batch_size).history
+    self.history = self.model.fit(self.X_train[:end], self.y_train[:end], 
+                                  validation_data=(self.X_test, self.y_test), 
+                                  epochs=epochs, batch_size=batch_size).history
     
-    self.model.save('obsidian/datadump/test-model.h5')
-    pickle_put('obsidian/datadump/history.pickle', self.history)
+    self.model.save('obsidian/classifier_model.h5')
+    pickle_put('obsidian/model_history.pickle', self.history)
     
     # Plot training history
     self.plot_train_performance(self.history)
@@ -212,8 +195,8 @@ class ProteinClassifier():
   def model_from_save(self):
     print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
 
-    self.model = load_model('obsidian/datadump/test-model.h5', custom_objects={'precision':precision})
-    self.history = pickle_get('obsidian/datadump/history.pickle')
+    self.model = load_model('obsidian/classifier_model.h5', custom_objects={'precision':precision})
+    self.history = pickle_get('obsidian/model_history.pickle')
 
     # Plot training history
     self.plot_train_performance(self.history) 
@@ -304,7 +287,13 @@ class ProteinClassifier():
     falses = sort.iloc[sort['Class'].values != np.rint(sort['Prediction'].values)]
     
     plt.figure(dpi=300)
-    plt.plot(x, preds, truex, trues['Class'].values, 'g.', falsex, falses['Class'].values, 'r.') 
+    plt.plot(x, preds, linewidth=0.5) # Predictions
+    plt.plot(truex, trues['Class'].values, 'g.', markersize=1.5) # True labels, correct
+    plt.plot(falsex, falses['Class'].values, 'r.', markersize=1.5) # True labels, incorrect
+    plt.xticks([0, len(sort)])
+    plt.yticks([0, 0.5, 1])
+    plt.xlabel('Sample number')
+    plt.ylabel('Probability')
 
   def show_confusion(self, cm, classes):
     '''
@@ -321,10 +310,9 @@ class ProteinClassifier():
     ppv = tp / (tp + fp) # Positive predictive value, Precision
     npv = tn / (tn + fn) # Negative predictive value
     f1 = 2 * (ppv * tpr) / (ppv + tpr)
-    stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}\n{8:<20}{9:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:',
-    tnr, 'PPV (Precision):', ppv, 'NPV:', npv, 'F1 score:', f1)
+    stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}\n{8:<20}{9:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:', tnr, 'PPV (Precision):', ppv, 'NPV:', npv, 'F1 score:', f1)
     print(stats)
-
+    
     # Plot
     plt.figure(dpi=300)
     try:
@@ -339,7 +327,8 @@ class ProteinClassifier():
     
     thresh = cm.max()/2
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-      plt.text(j, i, format(cm[i, j], 'd'), horizontalalignment='center', color = 'black' if cm[i,j]<thresh else 'white')
+      plt.text(j, i, format(cm[i, j], 'd'), horizontalalignment='center', 
+               color = 'black' if cm[i,j]<thresh else 'white')
 
     plt.xlabel('Predicted class')
     plt.ylabel('True class')
@@ -360,11 +349,12 @@ class ProteinClassifier():
     fig1.subplots_adjust(wspace=0.02, hspace=0.02)
 
     try:
-      for i in range(num):
-        ax1.flat[i].set_title((str(wrong_predictions[i,-1])+' '+str(probs[i])))
+      for i in range(10):
+        ax1.flat[i].set_title((str(wrongs.iloc[i]['Class'])+' '+str(wrongs.iloc[i]['Prediction'])))
     except Exception as e:
       print("Couldn't label plots: \n", e)
     
+    pd.set_option('display.max_colwidth', 80)
     print(wrongs[['Path','Class','Prediction']])
 
 def main(argv):
@@ -426,6 +416,7 @@ def main(argv):
     PC.build_model(**build_kwargs)
     PC.train_model(**train_kwargs)
     PC.test_model()
+    PC.show_wrongs()
   
   plt.show()
   
