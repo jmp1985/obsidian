@@ -41,7 +41,9 @@ def make_frame(datadict, classified=False):
     for path in datadict['Class']:
       classes.update(pickle_get(path))
 
-  df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], columns =['Path', 'Data', 'Class']) if classified else pd.DataFrame([[key, data[key]] for key in data.keys()], columns=['Path', 'Data'])
+  df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], 
+                    columns =['Path', 'Data', 'Class']) if classified else pd.DataFrame([[key, data[key]] 
+                    for key in data.keys()], columns=['Path', 'Data'])
   
   return df
 
