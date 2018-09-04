@@ -80,6 +80,9 @@ class Cbf2Np():
     '''
     :param file_dir: str, directory containing subdirectories of files to be converted
     :param destination: str, directory to house new files
+    :param bool box: If True, saved cropped images up to specified resolution
+    :param float max_res: maximum resoltion to crop images to in Angstrom
+    :param tuple centre: Beam centre in form (beam_y, beam_x) (in pixel coordinates)
     '''
     self.root = root
     self.dest = destination
@@ -171,11 +174,16 @@ class Cbf2Np():
     '''
     # read all files in bg_dir into list of np arrays
     bgData = []
-    files = glob.glob(bg_dir+'.*cbf')
-    print(files) 
+    files = glob.glob(os.path.join(bg_dir,'*.cbf'))
     for f in files:
       img = load(f)
-      bgData.append(img.get_raw_data().as_numpy_array())
+      self.extract_header(f, self.dest, bg=True)
+      if self.box:
+        h = os.path.join(self.dest, "bgheader.txt")
+        r0, r1, c0, c1 = self.get_box(h)
+        bgData.append(img.get_raw_data().as_numpy_array()[r0:r1, c0:c1]) # Extract cropped image data
+      else: 
+        bgData.append(img.get_raw_data().as_numpy_array())
       
     bgData = np.dstack(bgData)
     bgMean = np.mean(bgData, axis=2)
@@ -186,9 +194,10 @@ def main(argv):
   
   data_root = ''
   data_dest = ''
+  bg_directory = ''
   kwargs = {}
   try:
-    opts, args = getopt.getopt(argv, 'hc:r:', ['root=', 'dest='])
+    opts, args = getopt.getopt(argv, 'hc:r:b:', ['root=', 'dest='])
   except getopt.GetoptError as e:
     print(e)
     print("cbf_to_npy.py --root <directory containing cbf files (incl subdirs)> --dest <directory to store npy files in>")
@@ -200,6 +209,8 @@ def main(argv):
       data_dest = arg
     elif opt=='-c':
       kwargs['centre'] = eval(arg) # tuple
+    elif opt=='-b':
+      bg_directory = arg
     elif opt=='-r':
       kwargs['max_res'] = float(arg)
       kwargs['box'] = True
@@ -216,7 +227,8 @@ def main(argv):
   do_thing.read_data_directory()
 
   # background data, saved as single averaged file
-  #do_thing.read_bg_directory("data/realdata/tray2/g1/grid/")
+  if bg_directory:
+    do_thing.read_bg_directory(bg_directory)
 
 if __name__ == '__main__':
   main(sys.argv[1:])
