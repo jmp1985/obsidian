@@ -23,7 +23,8 @@ from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 
-save_dir = os.path.join(os.path.dirname(__file__), 'models')
+models_dir = os.path.join(os.path.dirname(__file__), 'models')
+data_dir = os.path.dirname(__file__)
 
 class ProteinClassifier():
   '''
@@ -61,7 +62,8 @@ class ProteinClassifier():
     Load data and classes out of relevant folders and store in a data frame along with
     file path for each image
     '''
-    global save_dir
+    global data_dir
+ 
     data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
     label_folder = '/media/Elements/obsidian/diffraction_data/classes/small/{}_classifications.pickle'
     pre, suf = data_folder.split('{}')
@@ -83,7 +85,7 @@ class ProteinClassifier():
         print("No labels found for {}, skipping".format(ID))
     database = pd.DataFrame({'Path':paths, 'Data':data, 'Class':labels})
     
-    pickle.dump(database, open(os.path.join(save_dir, '{}database.pickle'.format(name)), 'wb'))
+    pickle.dump(database, open(os.path.join(data_dir, '{}database.pickle'.format(name)), 'wb'))
 
   def load_table(self, path):
     '''
@@ -170,9 +172,9 @@ class ProteinClassifier():
     
     self.model = model
     
-    global save_dir
+    global models_dir
 
-    with open(os.path.join(save_dir, '{}.txt'.format(name)), 'w') as f:
+    with open(os.path.join(models_dir, '{}.txt'.format(name)), 'w') as f:
       f.write("loss "+("weighted_binary_crossentropy(weight=loss_weight)\n" if custom_loss else "binary_crossentropy\n"))
       f.write("loss_weight "+str(loss_weight)+"\n")
 
@@ -203,9 +205,9 @@ class ProteinClassifier():
     else:
       self.history = history
 
-    global save_dir
-    self.model.save(os.path.join(save_dir, '{}.h5'.format(name)))
-    pickle_put(os.path.join(save_dir, '{}_history.pickle'.format(name)), self.history)
+    global models_dir
+    self.model.save(os.path.join(models_dir, '{}.h5'.format(name)))
+    pickle_put(os.path.join(models_dir, '{}_history.pickle'.format(name)), self.history)
 
     # Plot training history
     self.plot_train_performance(self.history)
@@ -213,17 +215,17 @@ class ProteinClassifier():
   def model_from_save(self, name='classifier_model'):
     print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
 
-    global save_dir
+    global models_dir
 
-    with open(os.path.join(save_dir, '{}.txt'.format(name))) as f:
+    with open(os.path.join(models_dir, '{}.txt'.format(name))) as f:
       params = {line.split(' ')[0]:line.split(' ')[1] for line in f}
 
     loss_weight = eval(params['loss_weight'])
     loss = eval(params['loss'])
 
-    self.model = load_model(os.path.join(save_dir, '{}.h5'.format(name)), 
+    self.model = load_model(os.path.join(models_dir, '{}.h5'.format(name)), 
                             custom_objects={'precision':precision, 'weighted_loss':loss})
-    self.history = pickle_get(os.path.join(save_dir, '{}_history.pickle'.format(name)))
+    self.history = pickle_get(os.path.join(models_dir, '{}_history.pickle'.format(name)))
 
     # Plot training history
     self.plot_train_performance(self.history) 
@@ -386,7 +388,7 @@ class ProteinClassifier():
 
 def main(argv):
   
-  global save_dir
+  global data_dir
 
   build_kwargs = {}
   train_kwargs = {}
@@ -444,7 +446,7 @@ def main(argv):
     ProteinClassifier.make_database(IDs=IDs, name='new_')
 
   PC = ProteinClassifier()
-  PC.load_table(os.path.join(save_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
+  PC.load_table(os.path.join(data_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
   
   # Optional grid search run
   if mode=='grid':
