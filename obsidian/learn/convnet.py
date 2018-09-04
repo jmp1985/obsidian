@@ -3,7 +3,7 @@ Module of Classes and methods for building, training and handling classification
 '''
 
 # Basic packages
-import sys, getopt
+import sys, getopt, os
 from glob import glob
 import itertools
 import numpy as np
@@ -22,6 +22,8 @@ from sklearn.model_selection import GridSearchCV
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
+
+save_dir = os.path.join(os.path.dirname(__file__), 'models')
 
 class ProteinClassifier():
   '''
@@ -51,18 +53,20 @@ class ProteinClassifier():
     self.data_table = None
     self.model = None
     self.indexed_data = None
+    self.history = None
   
   @staticmethod
-  def make_database():
+  def make_database(IDs=None, name=''):
     '''
     Load data and classes out of relevant folders and store in a data frame along with
     file path for each image
     '''
-    
+    global save_dir
     data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
     label_folder = '/media/Elements/obsidian/diffraction_data/classes/small/{}_classifications.pickle'
     pre, suf = data_folder.split('{}')
-    IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))]
+    # Extract all IDs unless specified
+    IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))] if IDs is None else IDs
     
     data = []
     labels = []
@@ -79,7 +83,7 @@ class ProteinClassifier():
         print("No labels found for {}, skipping".format(ID))
     database = pd.DataFrame({'Path':paths, 'Data':data, 'Class':labels})
     
-    pickle.dump(database, open('obsidian/datadump/database.pickle', 'wb'))
+    pickle.dump(database, open(os.path.join(save_dir, '{}database.pickle'.format(name)), 'wb'))
 
   def load_table(self, path):
     '''
@@ -122,7 +126,8 @@ class ProteinClassifier():
     
   def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, 
                   dropout=0.3, padding='same', 
-                  loss='binary_crossentropy', loss_weight=0.5):
+                  custom_loss=False, loss_weight=0.5,
+                  name='classifier_model'):
     '''
     Construct and compile a keras Sequential model according to spec
 
@@ -143,7 +148,7 @@ class ProteinClassifier():
     model.add(Conv1D(filters = nfilters[0], kernel_size=kernel_sizes[0].item(), 
                      padding=padding, activation='relu', input_shape=(2000, 1)))
     model.add(MaxPooling1D())
-    model.add(Dropout(0.3))
+    model.add(Dropout(dropout))
 
     for i in range(1,nlayers):
       model.add(Conv1D(filters=nfilters[i], kernel_size=kernel_sizes[i].item(), 
@@ -156,20 +161,24 @@ class ProteinClassifier():
     model.add(Dense(200, activation='relu'))
     model.add(Dropout(dropout))
     model.add(Dense(50, activation='relu'))
-    #model.add(Dense(2, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
-    #optimiser
-    #adam = Adam(lr=0.01, decay=0.5)
   
-    if loss == 'custom':
-      loss = weighted_binary_crossentropy(weight=loss_weight)
+    #if loss == 'custom':
+    loss = weighted_binary_crossentropy(weight=loss_weight) if custom_loss else 'binary_crossentropy'
 
     model.compile(loss=loss, optimizer='adam', metrics=['accuracy', precision])
     
     self.model = model
+    
+    global save_dir
+
+    with open(os.path.join(save_dir, '{}.txt'.format(name)), 'w') as f:
+      f.write("loss "+("weighted_binary_crossentropy(weight=loss_weight)\n" if custom_loss else "binary_crossentropy\n"))
+      f.write("loss_weight "+str(loss_weight)+"\n")
+
     return model
 
-  def train_model(self, end=-1, epochs=30, batch_size=20):
+  def train_model(self, end=-1, epochs=30, batch_size=20, name='classifier_model', update=False):
     '''
     Shuffle and split data, then feed to model
 
@@ -178,25 +187,43 @@ class ProteinClassifier():
     :param int end: number of training samples (default use whole training set)
     '''
     assert self.model is not None, "Build model first!"
+    if update:
+      assert self.history is not None, "Load pre-trained model to use update option"
     
     self.massage()
     self.print_summary()
 
-    self.history = self.model.fit(self.X_train[:end], self.y_train[:end], 
-                                  validation_data=(self.X_test, self.y_test), 
-                                  epochs=epochs, batch_size=batch_size).history
+    history = self.model.fit(self.X_train[:end], self.y_train[:end], 
+                             validation_data=(self.X_test, self.y_test), 
+                             epochs=epochs, batch_size=batch_size).history
     
-    self.model.save('obsidian/classifier_model.h5')
-    pickle_put('obsidian/model_history.pickle', self.history)
-    
+    if update:
+      for key in self.history.keys():
+        self.history[key].extend(history[key])
+    else:
+      self.history = history
+
+    global save_dir
+    self.model.save(os.path.join(save_dir, '{}.h5'.format(name)))
+    pickle_put(os.path.join(save_dir, '{}_history.pickle'.format(name)), self.history)
+
     # Plot training history
     self.plot_train_performance(self.history)
 
-  def model_from_save(self):
+  def model_from_save(self, name='classifier_model'):
     print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
 
-    self.model = load_model('obsidian/classifier_model.h5', custom_objects={'precision':precision})
-    self.history = pickle_get('obsidian/model_history.pickle')
+    global save_dir
+
+    with open(os.path.join(save_dir, '{}.txt'.format(name))) as f:
+      params = {line.split(' ')[0]:line.split(' ')[1] for line in f}
+
+    loss_weight = eval(params['loss_weight'])
+    loss = eval(params['loss'])
+
+    self.model = load_model(os.path.join(save_dir, '{}.h5'.format(name)), 
+                            custom_objects={'precision':precision, 'weighted_loss':loss})
+    self.history = pickle_get(os.path.join(save_dir, '{}_history.pickle'.format(name)))
 
     # Plot training history
     self.plot_train_performance(self.history) 
@@ -358,27 +385,38 @@ class ProteinClassifier():
     print(wrongs[['Path','Class','Prediction']])
 
 def main(argv):
+  
+  global save_dir
 
   build_kwargs = {}
   train_kwargs = {}
-  mode='normal_testing'
+  mode = 'normal_testing'
   remake = False
+  name = 'classifier_model'
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:p:l:w:o:', ['mode=', 'remake'])
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:w:o:', ['mode=', 'remake', 'name=', 'custom_loss'])
   except getopt.GetoptError as e:
     print(e)
-    print("convnet.py -n <num layers> -b <batch size> -e <num epochs> -d <size train data> --mode <default: 'normal_testing'>")
+    print("convnet.py \
+          -n <num layers> \
+          -b <batch size> \
+          -e <num epochs> \
+          -d <size train data> \
+          --mode <default: 'normal_testing'> \
+          --name <model name (if name pre-exists will overwrite old model)> \
+          --remake to rebuild database")
+                    
     sys.exit(2)
-  if '-w' in opts and not 'custom' in args:
+  if '-w' in opts and not '--custom_loss' in opts:
     print("Warning: providing loss weight meaningless if custom loss function not specified")
   for opt, arg in opts:
     if opt=='-n':
       build_kwargs['nlayers'] = int(arg)
     elif opt=='-p':
       build_kwargs['padding'] = arg
-    elif opt=='-l':
-      build_kwargs['loss'] = arg
+    elif opt=='--custom_loss':
+      build_kwargs['custom_loss'] = True
     elif opt=='-w':
       build_kwargs['loss_weight'] = float(arg)
     elif opt=='-o':
@@ -388,17 +426,25 @@ def main(argv):
     elif opt=='-e':
       train_kwargs['epochs'] = int(arg)
     elif opt=='-d':
-      train_kwargs['end'] = int(arg)
+      train_kwargs['end'] = int(arg)     
     elif opt=='--mode':
       mode = arg
     elif opt=='--remake':
       remake = True
+    elif opt=='--name':
+      train_kwargs['name'] = arg
+      build_kwargs['name'] = arg
+      name = arg
   
   if remake:
     ProteinClassifier.make_database()
 
+  if mode=='update':
+    IDs = input("Enter list of space separated IDs: ").split(' ')
+    ProteinClassifier.make_database(IDs=IDs, name='new_')
+
   PC = ProteinClassifier()
-  PC.load_table('obsidian/datadump/database.pickle')
+  PC.load_table(os.path.join(save_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
   
   # Optional grid search run
   if mode=='grid':
@@ -409,9 +455,13 @@ def main(argv):
   # specified otherwise
   elif mode=='saved':
     PC.massage()
-    PC.model_from_save()
+    PC.model_from_save(name=name)
     PC.test_model()
     PC.show_wrongs()
+  elif mode=='update':
+    PC.model_from_save(name=name) 
+    PC.train_model(update=True, **train_kwargs)
+    PC.test_model()
   else:
     PC.build_model(**build_kwargs)
     PC.train_model(**train_kwargs)
