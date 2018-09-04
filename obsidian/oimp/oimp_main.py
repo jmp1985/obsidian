@@ -69,14 +69,18 @@ def pipe(top, dump_path, max_res):
     print("\tLooking for background data for tray {}...".format(tray))
 
     try:
-      background = np.load(os.path.join(dump_path,'{}_background.npy'.format(tray)))
-    except IOError:
-      print("\t\tNo background file found for {}".format(tray))
+      background = np.load(os.path.join(top, 'background.npy'))
+    except Exception as e:
+      print(e)
       try:
-        background = np.load(os.path.join(dump_path, '{}_background.npy'.format(ID)))
+        background = np.load(os.path.join(dump_path,'{}_background.npy'.format(tray)))
       except IOError:
-        print("\t\tNo background file found for {}, skipping folder".format(ID))
-        continue # Skip processing and proceed to next folder
+        print("\t\tNo background file found for {}".format(tray))
+        try:
+          background = np.load(os.path.join(dump_path, '{}_background.npy'.format(ID)))
+        except IOError:
+          print("\t\tNo background file found for {}, skipping folder".format(ID))
+          continue # Skip processing and proceed to next folder
     
     print("\tBackground data loaded")
 

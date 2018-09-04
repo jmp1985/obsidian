@@ -39,10 +39,19 @@ def find_rings(model, data_frame, show_top=10, display_top=False, name=''):
   sort = data_frame.sort_values('Predicted', ascending=False)
   top = sort.iloc[:show_top]
 
+  pd.set_option('max_colwidth', -1)
+  with open('full_results.txt', 'a+') as f:
+    f.write("\n\nClassification results for {}:\n".format(name))
+    f.write(sort[['Path', 'Predicted']].to_string())
+
+  with open('summary.txt', 'a+') as f:
+    f.write("\n\nTop {} images for {}:\n".format(show_top, name))
+    f.write(top[['Path', 'Predicted']].to_string())
+ 
+  print("Top {} images:".format(show_top))
+  print(top[['Path','Predicted']])
+
   if display_top:
-    pd.set_option('max_colwidth', -1)
-    print("Top {} images:".format(show_top))
-    print(sort[['Path','Predicted']].iloc[:show_top])
     display = ImgDisp([np.load(f) for f in sort['Path'].values][:show_top])
     fig, ax = display.disp()
     for i in range(show_top):
@@ -50,15 +59,41 @@ def find_rings(model, data_frame, show_top=10, display_top=False, name=''):
       ax.flat[i].set_title(title)
     plt.suptitle(os.path.splitext(name)[0])
 
-def main():
+def main(argv):
+  '''
+  Command line options:
+
+  * -d: data directory containing images to be classified
+  * -t: top n images to display / save to summary.txt
+  * --display: if specified, display top n images to desktop for each sample
+  '''
 
   start = time.time()
+  
+  data_directory = ''
+  find_kwargs = {}
+  model_name = 'standard_model'
+  try:
+    opts, args = getopt.getopt(argv, 'd:t:', ['display', 'model_name='])
+  except getopt.GetoptError as e:
+    print(e)
+  for opt, arg in opts:
+    if opt=='-d':
+      data_directory = arg
+    elif opt=='-t':
+      find_kwargs['show_top'] = int(arg)
+    elif opt=='--display':
+      find_kwargs['display_top'] = True
+    elif opt=='--model_name':
+      model_name = arg
 
   dump = 'datadump'
   if not os.path.exists(dump):
     os.mkdir(dump)
 
-  data_directory = '/media/Elements/obsidian/diffraction_data/lysozyme_small/tray2'
+  if not data_directory:
+    data_directory = input("Enter data directory: ")
+#'/media/Elements/obsidian/diffraction_data/lysozyme_small/tray2'
 
   max_res = 7 # Angstrom
 
@@ -68,15 +103,17 @@ def main():
 
   print("Loading model...")
   
-  model_path = os.path.join(os.path.dirname(__file__), 'datadump', 'test-model.h5')
+  loss = weighted_binary_crossentropy(weight=0.5)
+  
+  model_path = os.path.join(os.path.dirname(__file__), learn, models, '{}.h5'.format(model_name))
   model = load_model(model_path, 
-                      custom_objects={'precision':precision, 'my_loss':weighted_binary_crossentropy})
+                      custom_objects={'precision':precision, 'weighted_loss':loss})
 
   #input_data = make_frame({'Data':glob(os.path.join(dump, '*profiles.pickle'))})
   
   for datablock in glob(os.path.join(dump, '*profiles.pickle')):
     print("Analysing {}".format(datablock))
-    find_rings(model, make_frame({'Data':[datablock]}), show_top=10, display_top=True, name=datablock)
+    find_rings(model, make_frame({'Data':[datablock]}), name=datablock, **find_kwargs)
 
   end = time.time()
   secs = end - start
@@ -85,4 +122,4 @@ def main():
   plt.show()
 
 if __name__=='__main__':
-  main()
+  main(sys.argv[1:])
