@@ -1,5 +1,5 @@
-'''
-Module of Classes and methods for building, training and handling classification models
+'''Module of Classes and methods for building, 
+training and handling classification models
 '''
 
 # Basic packages
@@ -13,16 +13,14 @@ import pickle
 # Machine learning
 from keras.models import Sequential, load_model
 from keras.layers import Dense, Conv1D, MaxPooling1D, Flatten, Dropout
-from keras.optimizers import Adam
-from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
-from sklearn.model_selection import GridSearchCV
 # Obsidian modules
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 
+# Directories for saving and loading models and databases
 models_dir = os.path.join(os.path.dirname(__file__), 'models')
 data_dir = os.path.dirname(__file__)
 
@@ -39,7 +37,7 @@ class ProteinClassifier():
   :ivar split: fraction of data samples to be used for training
   
   **Default parameters:**
-    | number of layers: 3
+    | number of layers: 6 
     | kernel sizes:     min 3, max 100
     | dropout:          0.3
     | padding:          same
@@ -48,8 +46,9 @@ class ProteinClassifier():
   '''
 
   def __init__(self):
-    '''
-    When a ProteinClassifier object is instantiated, data_table, model and indexed_data are set to None to ensure that methods are called in the appropriate order
+    '''When a ProteinClassifier object is instantiated, 
+    data_table, model and indexed_data are set to None to 
+    ensure that methods are called in the appropriate order.
     '''
     self.data_table = None
     self.model = None
@@ -58,9 +57,11 @@ class ProteinClassifier():
   
   @staticmethod
   def make_database(IDs=None, name=''):
-    '''
-    Load data and classes out of relevant folders and store in a data frame along with
+    '''Load data and classes out of relevant folders and store in a data frame along with
     file path for each image
+    :param list IDs: load only specified datasets into database. If unspecified all available
+                     data will be loaded.
+    :param str name: Database title. Database will be saved as "namedatabase.pickle"
     '''
     global data_dir
  
@@ -88,8 +89,7 @@ class ProteinClassifier():
     pickle.dump(database, open(os.path.join(data_dir, '{}database.pickle'.format(name)), 'wb'))
 
   def load_table(self, path):
-    '''
-    Load data from pre-pickled database and extract separate lists for inputs and classes
+    '''Load data from pre-pickled database and extract separate lists for inputs and classes
 
     :param str path: path of stored data file
     '''
@@ -99,8 +99,7 @@ class ProteinClassifier():
     assert len(self.profiles) == len(self.classes)
 
   def massage(self):
-    '''
-    Massage data into shape, prepare for model fitting, populate member variables
+    '''Massage data into shape, prepare for model fitting, populate member variables
     '''
     assert self.data_table is not None, "Load data fist!" 
 
@@ -122,16 +121,19 @@ class ProteinClassifier():
     self.X_test, self.y_test = np.stack(self.test_data['Data'].values), np.stack(self.test_data['Class'].values)
 
   def print_summary(self):
+    '''Print summary of loaded samples and build model.
+    '''
     print("Data loaded!")
     print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
-  def build_model(self, nlayers=3, min_kern_size=3, max_kern_size=100, 
-                  dropout=0.3, padding='same', 
+  def build_model(self, nlayers=6, 
+                  min_kern_size=3, max_kern_size=100, 
+                  dropout=0.3, 
+                  padding='same', 
                   custom_loss=False, loss_weight=0.5,
                   name='classifier_model'):
-    '''
-    Construct and compile a keras Sequential model according to spec
+    '''Construct and compile a keras Sequential model according to spec
 
     :param int nlayers: number of 1D convolution layers (default 3)
     :param int min_kern_size: smallest kernel size (default 3)
@@ -180,9 +182,10 @@ class ProteinClassifier():
 
     return model
 
-  def train_model(self, end=-1, epochs=30, batch_size=20, name='classifier_model', update=False):
-    '''
-    Shuffle and split data, then feed to model
+  def train_model(self, epochs=30, batch_size=20, 
+                  name='classifier_model', 
+                  update=False, end=-1):
+    '''Shuffle and split data, then feed to model
 
     :param int epochs: number of training epochs (default 30)
     :param int batch_size: number of samples per weight update computation (default 20)
@@ -213,6 +216,12 @@ class ProteinClassifier():
     self.plot_train_performance(self.history)
 
   def model_from_save(self, name='classifier_model'):
+    '''Load a prebuilt model from file as instance model.
+    Model must have an associated .txt file recording its loss
+    function.
+
+    :param str name: name of saved model to be loaded
+    '''
     print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
 
     global models_dir
@@ -231,55 +240,28 @@ class ProteinClassifier():
     self.plot_train_performance(self.history) 
 
   def test_model(self, batch_size=20):
-    '''
-    Test model after training. Display training stats and test results
+    '''Test model after training. Display training stats and test results.
 
     :param int batch_size:
     '''
+
+    # Score model on test data
     score = self.model.evaluate(self.X_test, self.y_test, batch_size=batch_size)
     print("Loss: {0:.2f}, Accuracy: {1:.2f}, Precision: {2:.2f}".format(score[0], score[1], score[2]))
     
-    # Analyse performance
+    # Analyse performance, add predictions to loaded database
     predicted = self.model.predict_classes(self.X_test)
     probs = self.model.predict_proba(self.X_test)
     self.test_data['Prediction'] = probs
-
+    
+    # Display results graphically
     cm = confusion_matrix(self.y_test, predicted)
     self.show_confusion(cm, [0,1])
 
     self.plot_test_results()
 
-  def grid_search(self, batch_size=20, epochs=30, end=-1):
-    '''
-    Perform a grid search of parameter space to find optimal hyperparameter configuration
-    '''
-    model = KerasClassifier(build_fn=self.build_model, batch_size=batch_size, epochs=epochs, verbose=2)
-    epochs = [35, 50]
-    #dropout = [0.2, 0.3, 0.5]
-    max_kern_size = [50, 100, 200, 400]
-    min_kern_size = [3, 5, 10]
-    #nlayers = [2, 3, 4]
-    batch_size = [10, 20]
-    #padding = ['valid', 'same']
-    param_grid = dict(max_kern_size=max_kern_size, min_kern_size=min_kern_size, dropout=[0.3], nlayers=[4], padding=['valid'])
-    #param_grid = dict(padding=padding, nlayers=nlayers, dropout=dropout)
-
-    grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=['accuracy', 'precision'], refit='precision')
-    search_result = grid.fit(self.shuffled_data[:end,:-1], self.shuffled_data[:end,-1])
-    
-    results = pd.DataFrame(search_result.cv_results_)
-    try:
-      print(results)
-    except Exception as e:
-      print(e)
-    try:
-      pickle_put('obsidian/datadump/grid_search.pickle', results)
-    except Exception as e:
-      print(e)
-      
   def plot_train_performance(self, history):
-    '''
-    Plot evolution of metrics such as accuracy and loss as a function of epoch number
+    '''Plot evolution of metrics such as accuracy and loss as a function of epoch number
 
     :param history: keras history object containing metric info from training
     '''
@@ -304,29 +286,37 @@ class ProteinClassifier():
     plt.tight_layout()
   
   def plot_test_results(self):
+    '''Produce a plot of model predictions against true labels
+    '''
+
+    # Sort samples by predicted probability
     sort = self.test_data.sort_values('Prediction', ascending=False)
 
     x = np.arange(len(sort))
     preds = sort['Prediction'].values
 
+    # Determine indices of true and false predictions
     truex = np.where(sort['Class'] == np.rint(sort['Prediction']))[0]
     trues = sort.iloc[sort['Class'].values == np.rint(sort['Prediction'].values)]
 
     falsex = np.where(sort['Class'] != np.rint(sort['Prediction']))[0]
     falses = sort.iloc[sort['Class'].values != np.rint(sort['Prediction'].values)]
     
+    # Construct figure
     plt.figure(dpi=300)
+    
     plt.plot(x, preds, linewidth=0.5) # Predictions
     plt.plot(truex, trues['Class'].values, 'g.', markersize=1.5) # True labels, correct
     plt.plot(falsex, falses['Class'].values, 'r.', markersize=1.5) # True labels, incorrect
+    
     plt.xticks([0, len(sort)])
     plt.yticks([0, 0.5, 1])
+    
     plt.xlabel('Sample number')
     plt.ylabel('Probability')
 
   def show_confusion(self, cm, classes):
-    '''
-    Display confusion plot and stats
+    '''Display confusion plot and stats
 
     :param array cm: calcualted confusion matrix
     :param classes: list of class labels
@@ -342,18 +332,15 @@ class ProteinClassifier():
     stats = '{0:<20}{1:>10.2f}\n{2:<20}{3:>10.2f}\n{4:<20}{5:>10.2f}\n{6:<20}{7:>10.2f}\n{8:<20}{9:>10.2f}'.format('Sensitivity:', tpr, 'Specificity:', tnr, 'PPV (Precision):', ppv, 'NPV:', npv, 'F1 score:', f1)
     print(stats)
     
-    # Plot
+    # Construct figure 
     plt.figure(dpi=300)
-    try:
-      plt.imshow(cm, interpolation='nearest', cmap='magma_r')
-    except Exception as e:
-      print(e)
-      plt.imshow(cm, interpolation='nearest', cmap=plt.cm.GnBu)
+    plt.imshow(cm, interpolation='nearest', cmap='magma_r')
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes)
     plt.yticks(tick_marks, classes)
-    
+
+    # Matrix numerical values
     thresh = cm.max()/2
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
       plt.text(j, i, format(cm[i, j], 'd'), horizontalalignment='center', 
@@ -362,23 +349,22 @@ class ProteinClassifier():
     plt.xlabel('Predicted class')
     plt.ylabel('True class')
     
-  def show_wrongs(self):
-    '''
-    Display wongly classified images together with their true class and predicted class probability
+  def show_wrongs(self, n=10):
+    '''Display wongly classified images 
+    together with their true class and predicted class probabilities.
+    Print wrongly predicted images in tabular form.
 
-    :param wrongs: paths of images
-    :param wrong_predications: predicted classes
-    :param probs: predicted probabilities
+    :param int n: number of wrongs to display 
     '''
     wrongs = self.test_data.iloc[self.test_data['Class'].values != np.rint(self.test_data['Prediction'].values)]
     num = len(wrongs)
-    w = ImgDisp([np.load(f) for f in wrongs['Path'].values][:10])
+    w = ImgDisp([np.load(f) for f in wrongs['Path'].values][:n])
 
     fig1, ax1 = w.disp()
     fig1.subplots_adjust(wspace=0.02, hspace=0.02)
 
     try:
-      for i in range(10):
+      for i in range(n):
         ax1.flat[i].set_title((str(wrongs.iloc[i]['Class'])+' '+str(wrongs.iloc[i]['Prediction'])))
     except Exception as e:
       print("Couldn't label plots: \n", e)
@@ -395,6 +381,7 @@ def main(argv):
   mode = 'normal_testing'
   remake = False
   name = 'classifier_model'
+
   # Parse command line options
   try:
     opts, args = getopt.getopt(argv, 'n:b:e:d:p:w:o:', ['mode=', 'remake', 'name=', 'custom_loss'])
@@ -447,15 +434,10 @@ def main(argv):
 
   PC = ProteinClassifier()
   PC.load_table(os.path.join(data_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
-  
-  # Optional grid search run
-  if mode=='grid':
-    PC.massage()
-    PC.grid_search(**train_kwargs)
-  
+   
   # Build and train model with default parameters except where 
   # specified otherwise
-  elif mode=='saved':
+  if mode=='saved':
     PC.massage()
     PC.model_from_save(name=name)
     PC.test_model()
@@ -468,7 +450,7 @@ def main(argv):
     PC.build_model(**build_kwargs)
     PC.train_model(**train_kwargs)
     PC.test_model()
-    PC.show_wrongs()
+    #PC.show_wrongs()
   
   plt.show()
   
