@@ -10,12 +10,27 @@ setup(
     keywords = "awesome python package",
     packages=[
       'obsidian', 
-      'tests'
+      'obsidian.learn',
+      'obsidian.oimp',
+      'obsidian.fex',
+      'obsidian.utils',
+      'tests',
     ],
-    scripts=[
+    scripts=['bin/obsidian.convnet', 
+             'bin/obsidian.import_cbf',
+             'bin/obsidian.find_rings',
+             'bin/obsidian.process'
     ],
+    package_data={'obsidian': ['learn/models/*', 'learn/database.pickle']
+    },
     install_requires=[
       'pytest',
+      'keras',
+      'theano',
+      'matplotlib',
+      'numpy',
+      'sklearn',
+      'pandas',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
