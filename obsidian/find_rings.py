@@ -2,16 +2,18 @@
 Process data and search for rings
 '''
 
+print("Name: ",__name__)
+
 import os, sys, getopt, pickle, time
 from glob import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from keras.models import Sequential, load_model
-from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import make_frame
 from obsidian.oimp.oimp_main import pipe
+from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 
 def find_rings(model, data_frame, show_top=10, display_top=False, name=''):
   '''
@@ -45,7 +47,12 @@ def find_rings(model, data_frame, show_top=10, display_top=False, name=''):
     f.write(sort[['Path', 'Predicted']].to_string())
 
   with open('summary.txt', 'a+') as f:
-    f.write("\n\nTop {} images for {}:\n".format(show_top, name))
+    f.write("\n\nResults for {}: \n".format(name))
+    f.write("Rings found in "+
+            str(np.array(predictions > 0.5).sum())+
+            ' images out of '+
+            str(len(predictions)))
+    f.write("\n\nTop {} images:\n".format(show_top))
     f.write(top[['Path', 'Predicted']].to_string())
  
   print("Top {} images:".format(show_top))
@@ -60,8 +67,7 @@ def find_rings(model, data_frame, show_top=10, display_top=False, name=''):
     plt.suptitle(os.path.splitext(name)[0])
 
 def main(argv):
-  '''
-  Command line options:
+  '''Command line options:
 
   * -d: data directory containing images to be classified
   * -t: top n images to display / save to summary.txt
@@ -105,7 +111,7 @@ def main(argv):
   
   loss = weighted_binary_crossentropy(weight=0.5)
   
-  model_path = os.path.join(os.path.dirname(__file__), learn, models, '{}.h5'.format(model_name))
+  model_path = os.path.join(os.path.dirname(__file__), 'learn', 'models', '{}.h5'.format(model_name))
   model = load_model(model_path, 
                       custom_objects={'precision':precision, 'weighted_loss':loss})
 
