@@ -8,27 +8,25 @@ import pickle
 import os
 
 class Processor():
-  '''
-  Class encapsulating all image processing, to produce data that can be passed onto the feature extraction stage of Obsidian.
+  '''Encapsulation of all image processing, to produce data that can be 
+  passed onto the feature extraction stage of Obsidian.
   
   :ivar dict collection: images to be processed in form {filepath : image array}
   :ivar dict processedData: storage dict for processed images
-  :ivar array bg: 
+  :ivar array bg: background image data
   '''
   
   def __init__(self, coll, background=None):
     '''
-    :param collection: dict of filepath : image pairs to be processed
+    :param dict coll: dict of filepath : image pairs to be processed
     '''
-    self.collection = coll
     self.processedData = coll
     self.bg = background
     
   def background(self, bg=None):
-    '''
-    Remove a background from image collection
+    '''Remove background from image collection
     
-    :param background: to be removed (provide only if not specified on instantiation)
+    :param bg: to be removed (provide only if not specified on instantiation)
     :returns: modified files
     '''
     assert self.bg is not None or bg is not None, "No background image provided"
@@ -40,8 +38,7 @@ class Processor():
       self.processedData[name] = (np.subtract(f, bg))
   
   def rm_artifacts(self, value=600):
-    '''
-    Null pixel values above a reasonable photon count
+    '''Null pixel values above a reasonable photon count
 
     :param int value: cutoff value, pixels with higher counts assumed artifacts (default 600)
     '''
@@ -52,10 +49,10 @@ class Processor():
       self.bg[self.bg > value] = -1
 
   def dump_save(self, ID, path=None):
-    '''
-    Save processed images to pickle file
+    '''Save processed images to pickle file
 
     :param str ID: identification label
+    :param str path: destination path (if None, default is obsidian/datadump)
     '''
 
     default = 'obsidian/datadump'

@@ -1,5 +1,5 @@
 '''
-Module encapsulating all feature extraction processes of obsidian to produce the
+Module encapsulating feature extraction to produce 
 machine learning input data
 '''
 
@@ -11,8 +11,7 @@ import math
 from obsidian.utils.data_handling import read_header
 
 def get_params(header):
-    '''
-    Return image parameters necessary for calculating a radius in pixels from a given resolution
+    '''Return image parameters necessary for calculating a radius in pixels from a given resolution
 
     :param str header: filepath for header.txt file, containing all image parameters 
     :returns: wavelength, detector distance, pixel size
@@ -35,8 +34,7 @@ def get_params(header):
     return wl, L, pixel_size
  
 def radius_from_res(max_res, header):
-  '''
-  Calculate radius in pixels of a given maximum resolution. Use to compute rmax for Trace()
+  '''Calculate radius in pixels of a given maximum resolution. Use to compute rmax for Trace()
 
   :param float wl: X-Ray wavelength in Angstrom (e-10 m)
   :param float max_res: Maximum resolution at which user expects to find protein rings, in Angstrom
@@ -53,8 +51,7 @@ def radius_from_res(max_res, header):
   return r/pixel_size # Radius in pixels
 
 class FeatureExtractor():
-  '''
-  Feature extraction tool, for extracting mean traces for 
+  '''Feature extraction tool, for extracting and storing mean traces 
   '''
   
   def __init__(self, preparedData):
@@ -64,9 +61,8 @@ class FeatureExtractor():
     self.data = preparedData
     self.profiles = {}
   
-  def meanTraces(self, rmax, nangles, centre=None):
-    '''
-    Calculate mean trace vectors for all images in self.data
+  def mean_traces(self, rmax, nangles, centre=None):
+    '''Calculate mean trace vectors for all images in self.data
 
     :param tuple centre: beam centre in pixel coordinates
     :param int rmax: radius in pixels of data to be extracted, corresponding to the relevant resolution
@@ -76,18 +72,22 @@ class FeatureExtractor():
     .. note::
 
       meanTraces() is computationally expensive. Select a low nangles value for testing purposes
-    '''
+    '''      
+    if rmax is None:
+      print(("Warning: rmax either not specified or exeeded image dimensions. \
+rmax set to half smallest image dimension."))
+
     angles = np.linspace(89, -89, nangles)
     for name, img in self.data.items():
       tr = Trace(img.shape, angles, centre, rmax)
-      self.profiles[name] = tr.meanTrace(img)[1]
+      self.profiles[name] = tr.mean_trace(img)[1]
     return self.profiles
     
   def dump_save(self, ID, path=None):
-    '''
-    Save extracted data to pickle file in obsidian/datadump or specified path
+    '''Save extracted data to pickle file in obsidian/datadump or specified path
 
     :param str ID: data batch label for later identification
+    :param str path: destination path (if not specified, default is obsidian/datadump)
     '''
     default = 'obsidian/datadump'
     if not os.path.exists(default) and path is None:

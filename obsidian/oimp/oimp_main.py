@@ -6,15 +6,14 @@ from user input (exactly how differs between main1 and main2) and the
 files are then passed through Processor and FeatureExtractor objects respectively, and the resulting
 data dictionaries of form {imagepath:mean_profile_data} are saved to pickle files named with IDs
 '''
-import os, os.path
+import os, os.path, sys, getopt
 from glob import glob
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-import skimage.io as skio
 from obsidian.utils.imgdisp import ImgDisp
 from obsidian.utils.data_handling import pickle_get, pickle_put, join_files, split_data, read_header
-from obsidian.utils.bg_from_blanks import build_bg_files
+from obsidian.utils.build_bg_files import bg_from_scan
 from obsidian.fex.trace import Trace
 from obsidian.fex.extractor import FeatureExtractor as Fex, radius_from_res
 from obsidian.oimp.processor import Processor
@@ -39,6 +38,24 @@ def get_img_dirs(root):
       
   return bottom_dirs
 
+def locate_background_file(img_data_dir):
+  '''Ascend img_dir until the first candidate for a background
+  file is found.
+  
+  :param str img_data_dir: bottom directory of diffraction images
+  :returns: path to background file
+  '''
+  current_path = img_data_dir
+
+  while True:
+    next_path = os.path.realpath(os.path.join(current_path, '..'))
+    if 'background.npy' in os.listdir(current_path):
+      return os.path.join(current_path, 'background.npy')
+    elif next_path == current_path:
+      return None
+    else:
+      current_path = next_path
+
 def pipe(top, dump_path, max_res):
   '''
   This version takes a single top level directory as input and processes all nested files.
@@ -48,10 +65,10 @@ def pipe(top, dump_path, max_res):
   #   directories  #
   ##################
   
+  last = ''
 
   bottom_dirs = get_img_dirs(top)
-  build_bg_files(top, dump_path)
-
+  #bg_from_scan(top, dump_path, ('f1', 'g1'))
   for img_data_dir in bottom_dirs.keys():
   ############################
   # read in background data  #
@@ -60,38 +77,32 @@ def pipe(top, dump_path, max_res):
     assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
     ID = bottom_dirs[img_data_dir]['ID']
     tray = bottom_dirs[img_data_dir]['tray']
-    print("Working on {}...".format(ID))  
+    print("\n###### Working on {}... ######".format(ID))  
     
     if os.path.exists(os.path.join(dump_path, '{}_profiles.pickle'.format(ID))):
       print("\t{} already processed, skipping".format(ID))
       continue
 
-    print("\tLooking for background data for tray {}...".format(tray))
+    print("\tLooking for background data for {}...".format(img_data_dir))
 
-    try:
-      background = np.load(os.path.join(top, 'background.npy'))
-    except Exception as e:
-      print(e)
-      try:
-        background = np.load(os.path.join(dump_path,'{}_background.npy'.format(tray)))
-      except IOError:
-        print("\t\tNo background file found for {}".format(tray))
-        try:
-          background = np.load(os.path.join(dump_path, '{}_background.npy'.format(ID)))
-        except IOError:
-          print("\t\tNo background file found for {}, skipping folder".format(ID))
-          continue # Skip processing and proceed to next folder
+    background_path = locate_background_file(img_data_dir)
     
-    print("\tBackground data loaded")
+    if background_path is None:
+      print("\t\tNo background file found for {}, skipping folder".format(ID))
+      continue
+    else:
+      background = np.load(background_path)
 
-    batched_files = split_data( glob(img_data_dir+'/*.npy'), 150 ) # batch size of 150
+    print("\tBackground data loaded from: {}".format(background_path))
+
+    # Batch data processing to avoid memory issues
+    batched_files = split_data( glob(img_data_dir+'/*.npy'), 400 ) # batch size of 150
 
     batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
     i = 0
-    
 
     header = os.path.join(img_data_dir, 'header.txt')
-    rmax = radius_from_res(max_res, header)
+    rmax = radius_from_res(max_res, header) if max_res is not None else None
 
     for files in batched_files: 
       
@@ -102,8 +113,7 @@ def pipe(top, dump_path, max_res):
       
       print("\t\tLoading image data...") 
 
-      data = {f : np.load(f) for f in files}
-      names = list(data.keys())
+      data = {f : np.load(f) for f in files if 'background' not in f}
       
       ############   processing   ############
       
@@ -120,14 +130,10 @@ def pipe(top, dump_path, max_res):
       print("\t\tExtracting profiles...")
 
       fex = Fex(data)
-
-      fex.meanTraces(rmax=rmax, nangles=20)
+      fex.mean_traces(rmax=rmax, nangles=20)
 
       ############# saving ##############
       
-      #print("Saving...")
-      #process.dump_save(ID)
-
       print("\t\tSaving profiles to {}/{}_profiles.pickle...".format(dump_path, batchID))
       fex.dump_save(batchID, dump_path)
       
@@ -140,115 +146,35 @@ def pipe(top, dump_path, max_res):
 
     paths = [os.path.join(dump_path, '{}_profiles.pickle'.format(batchID)) for batchID in batchIDs]
     join_files(os.path.join(dump_path, '{}_profiles.pickle'.format(ID)), paths)
-
-# obsolete
-def main2():
-  '''
-  '''
-  ##################
-  #   directories  #
-  ##################
-
-  trays = {}
+    last = os.path.join(dump_path, '{}_profiles.pickle'.format(ID))
   
-  done = False
+  return last
 
-  while not done:
-    tray = input("Enter tray number (or press enter if done): ")
-    
-    if tray == '':
-      done = True
-    else:
-      wells = input("Enter comma separated well names for tray number {}: ".format(tray)).split(',')
-      trays[int(tray)] = wells
+def run(argv):
   
+  top, dump, max_res = None, None, None
+  # Parse command line options
+  try:
+    opts, args = getopt.getopt(argv, 't:d:r:')
+  except getopt.GetoptError as e:
+    print(e)                   
+    sys.exit(2)
+  for opt, arg in opts:
+    if opt=='-t':
+      top = arg
+    elif opt=='-d':
+      dump = arg
+    elif opt=='-r':
+      max_res = int(arg)
 
-  for tray_nr in trays.keys():
- 
-    ############################
-    # read in background data  #
-    ############################
-      
-    #print("Loading background data for tray {}...".format(tray_nr))
-      
-    #background = np.load('obsidian/datadump/tray{}_background.npy'.format(tray_nr))
-    
-    for well in trays[tray_nr]:
+  if not all((top, dump)):
+    print("-t, -d are required")
+    sys.exit(2)
 
-      img_data_dir = '/media/Elements/obsidian/diffraction_data/180726/tray{}/{}'.format(tray_nr, well)
-      assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
-      ID = 'T{}{}'.format(tray_nr, well)
+  if not os.path.exists(dump):
+    os.makedirs(dump)
 
-      batched_files = split_data( glob(img_data_dir+'/*.npy'), 150 ) # batch size of 150
-      print([len(l) for l in batched_files])
-
-      batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
-      i = 0
-      
-      max_res=7 #Angstrom
-
-      header = os.path.join(img_data_dir, 'header.txt')
-      rmax = radius_from_res(max_res, header)
-
-      for files in batched_files: 
-        
-        batchID = batchIDs[i]
-        print('Batch nr: ', i)
-        
-        ######################
-        # read in data files #
-        ######################
-        
-        print("Loading image data...") 
-
-        data = {f : np.load(f) for f in files}
-        names = list(data.keys())
-        
-        ##################
-        #   processing   #
-        ##################
-        
-        print("Pre-prossessing images...")
-        
-        process = Processor(data)
-
-        process.rm_artifacts(value=500)
-        #process.background(background)
-        data = process.processedData
-        ######################
-        #  feature analysis  #
-        ######################
-        
-        print("Extracting profiles...")
-
-        fex = Fex(data)
-
-        fex.meanTraces(centre=(1318.37, 1249.65), rmax=rmax, nangles=20)
-
-        ####################
-        #    saving        #
-        ####################
-        
-        #print("Saving...")
-        #process.dump_save(ID)
-
-        print("Saving profiles to datadump/{}_profiles.pickle...".format(batchID))
-        fex.dump_save(batchID)
-        
-        del data
-        del fex
-        del process
-        i += 1
-
-      ################
-      # join batches #
-      ################
-
-      paths = ['obsidian/datadump/{}_profiles.pickle'.format(batchID) for batchID in batchIDs]
-      join_files('obsidian/datadump/{}new_profiles.pickle'.format(ID), paths)
+  pipe(top, dump, max_res)
 
 if __name__ == '__main__':
-  top = input("Enter top level directory: ")
-  dump_path = 'obsidian/datadump/with-background'
-  max_res = 7 #Angstrom
-  pipe(top, dump_path, max_res)
+  run(sys.argv[1:])
