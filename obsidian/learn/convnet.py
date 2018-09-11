@@ -34,7 +34,7 @@ class ProteinClassifier():
   :ivar model: Keras model object
   :ivar indexed_data: (shuffled)
   :ivar history: created when model trained
-  :ivar split: fraction of data samples to be used for training
+  :ivar split: number of data samples to be used for training (split fraction is 0.8)
   
   **Default parameters:**
     | number of layers: 6 
@@ -66,7 +66,7 @@ class ProteinClassifier():
     global data_dir
  
     data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
-    label_folder = '/media/Elements/obsidian/diffraction_data/classes/small/{}_classifications.pickle'
+    label_folder = '/media/Elements/obsidian/classes/small/{}_classifications.pickle'
     pre, suf = data_folder.split('{}')
     # Extract all IDs unless specified
     IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))] if IDs is None else IDs
@@ -227,10 +227,13 @@ class ProteinClassifier():
     global models_dir
 
     with open(os.path.join(models_dir, '{}.txt'.format(name))) as f:
-      params = {line.split(' ')[0]:line.split(' ')[1] for line in f}
+      params = {line.split(' ')[0] : line.split(' ')[1] for line in f}
 
     loss_weight = eval(params['loss_weight'])
-    loss = eval(params['loss'])
+    try:
+      loss = eval(params['loss'])
+    except NameError:
+      loss = params['loss']
 
     self.model = load_model(os.path.join(models_dir, '{}.h5'.format(name)), 
                             custom_objects={'precision':precision, 'weighted_loss':loss})
@@ -384,7 +387,7 @@ def main(argv):
 
   # Parse command line options
   try:
-    opts, args = getopt.getopt(argv, 'n:b:e:d:p:w:o:', ['mode=', 'remake', 'name=', 'custom_loss'])
+    opts, args = getopt.getopt(argv, 'n:b:e:d:p:w:o:', ['mode=', 'remake', 'name=', 'custom_loss', 'data='])
   except getopt.GetoptError as e:
     print(e)
     print("convnet.py \
@@ -424,14 +427,17 @@ def main(argv):
       train_kwargs['name'] = arg
       build_kwargs['name'] = arg
       name = arg
+    elif opt=='--data':
+      data_dir = arg
+      
   
   if remake:
     ProteinClassifier.make_database()
-
+  '''
   if mode=='update':
     IDs = input("Enter list of space separated IDs: ").split(' ')
     ProteinClassifier.make_database(IDs=IDs, name='new_')
-
+  '''
   PC = ProteinClassifier()
   PC.load_table(os.path.join(data_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
    
