@@ -1,0 +1,2 @@
+loss weighted_binary_crossentropy(weight=loss_weight)
+loss_weight 0.5
