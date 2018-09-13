@@ -1,0 +1,7 @@
+#!/bin/env python3
+
+from obsidian.learn import convnet
+import sys
+
+if __name__=='__main__':
+  convnet.main(sys.argv[1:])

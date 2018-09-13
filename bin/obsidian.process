@@ -1,0 +1,7 @@
+#!/bin/env python3
+
+from obsidian.oimp import oimp_main
+import sys
+
+if __name__=='__main__':
+  oimp_main.run(sys.argv[1:])

@@ -19,7 +19,8 @@ setup(
     scripts=['bin/obsidian.convnet', 
              'bin/obsidian.import_cbf',
              'bin/obsidian.find_rings',
-             'bin/obsidian.process'
+             'bin/obsidian.process',
+             'bin/obsidian.labeller'
     ],
     package_data={'obsidian': ['learn/models/*', 'learn/database.pickle']
     },

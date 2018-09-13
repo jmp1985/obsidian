@@ -1,0 +1,6 @@
+#!/bin/env python3
+
+from obsidian import labeller
+
+if __name__=='__main__':
+  labeller.main()
