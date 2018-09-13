@@ -1,0 +1,7 @@
+obsidian
+========
+
+.. toctree::
+   :maxdepth: 4
+
+   obsidian

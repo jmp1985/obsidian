@@ -1,0 +1,30 @@
+obsidian.fex package
+====================
+
+Submodules
+----------
+
+obsidian.fex.extractor module
+-----------------------------
+
+.. automodule:: obsidian.fex.extractor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.fex.trace module
+-------------------------
+
+.. automodule:: obsidian.fex.trace
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: obsidian.fex
+    :members:
+    :undoc-members:
+    :show-inheritance:

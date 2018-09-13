@@ -1,0 +1,32 @@
+obsidian package
+================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    obsidian.fex
+    obsidian.learn
+    obsidian.oimp
+    obsidian.utils
+
+Submodules
+----------
+
+obsidian.find_rings module
+--------------------------
+
+.. automodule:: obsidian.find_rings
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: obsidian
+    :members:
+    :undoc-members:
+    :show-inheritance:

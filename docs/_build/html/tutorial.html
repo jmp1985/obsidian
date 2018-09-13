@@ -1,0 +1,484 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>How To Use Obsidian - A Tutorial and Cheat Sheet &#8212; Obsidian 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="obsidian package" href="obsidian.html" />
+    <link rel="prev" title="Tutorial" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="obsidian.html" title="obsidian package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Obsidian 0.0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="how-to-use-obsidian-a-tutorial-and-cheat-sheet">
+<h1><a class="toc-backref" href="#id2">How To Use Obsidian - A Tutorial and Cheat Sheet</a><a class="headerlink" href="#how-to-use-obsidian-a-tutorial-and-cheat-sheet" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#how-to-use-obsidian-a-tutorial-and-cheat-sheet" id="id2">How To Use Obsidian - A Tutorial and Cheat Sheet</a><ul>
+<li><a class="reference internal" href="#overview" id="id3">1. Overview</a><ul>
+<li><a class="reference internal" href="#obsidian-classification-models" id="id4">Obsidian classification models</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#data-conversion-and-storage" id="id5">2. Data conversion and storage</a></li>
+<li><a class="reference internal" href="#finding-protein-rings" id="id6">3. Finding protein rings</a></li>
+<li><a class="reference internal" href="#training-and-updating-the-obsidian-classifier" id="id7">4. Training and updating the obsidian classifier</a><ul>
+<li><a class="reference internal" href="#new-data" id="id8">4.1 New data</a><ul>
+<li><a class="reference internal" href="#processing-data" id="id9">4.1.1 Processing data</a></li>
+<li><a class="reference internal" href="#labelling-data" id="id10">4.1.2 Labelling data</a></li>
+<li><a class="reference internal" href="#combining-data-and-labels" id="id11">4.1.3 Combining data and labels</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#preexisting-data-using-obsidian-convnet" id="id12">4.2 Preexisting data: Using obsidian.convnet</a><ul>
+<li><a class="reference internal" href="#updating-an-existing-model" id="id13">4.2.1 Updating an existing model</a></li>
+<li><a class="reference internal" href="#testing-an-existing-model" id="id14">4.2.2 Testing an existing model</a></li>
+<li><a class="reference internal" href="#training-a-brand-new-model" id="id15">4.2.3 Training a brand new model</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="overview">
+<h2><a class="toc-backref" href="#id3">1. Overview</a><a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>Obsidian is a package for preprocessing and classifying powder diffraction images based
+on the presence of protein rings. Raw data in cbf format first needs to be
+converted to npy format in dials.python before running the rest of obsidian in python3.</p>
+<div class="section" id="obsidian-classification-models">
+<h3><a class="toc-backref" href="#id4">Obsidian classification models</a><a class="headerlink" href="#obsidian-classification-models" title="Permalink to this headline">¶</a></h3>
+<p>Three models are included in obsidian:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="28%" />
+<col width="14%" />
+<col width="14%" />
+<col width="19%" />
+<col width="4%" />
+<col width="10%" />
+<col width="10%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Model name</th>
+<th class="head">Sensitivity</th>
+<th class="head">Specificity</th>
+<th class="head">Precision (PPV)</th>
+<th class="head">NPV</th>
+<th class="head">F1-score</th>
+<th class="head">Accuracy</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>high_sensitivity_model</td>
+<td>96%</td>
+<td>82%</td>
+<td>81%</td>
+<td>96%</td>
+<td>88%</td>
+<td>88%</td>
+</tr>
+<tr class="row-odd"><td>high_specificity_model</td>
+<td>75%</td>
+<td>98%</td>
+<td>96%</td>
+<td>84%</td>
+<td>84%</td>
+<td>88%</td>
+</tr>
+<tr class="row-even"><td>standard_model</td>
+<td>91%</td>
+<td>92%</td>
+<td>90%</td>
+<td>92%</td>
+<td>90%</td>
+<td>91%</td>
+</tr>
+</tbody>
+</table>
+<p>See <a class="reference external" href="https://en.wikipedia.org/wiki/Confusion_matrix">here</a> for information on the listed statistics.</p>
+<p>If the user wishes to <em>minimise the number of false positives</em>, at the cost of a high number
+of misses, select high_specificity_model. To <em>minimise the number of misses</em>, at the
+cost of a hight number of (possibly time-wasing) false positives, select high_sensitivity_model.
+By default obsidian will select the standard model, but the user has the option to specify a different
+model or construct their own (detailed below).</p>
+</div>
+</div>
+<div class="section" id="data-conversion-and-storage">
+<h2><a class="toc-backref" href="#id5">2. Data conversion and storage</a><a class="headerlink" href="#data-conversion-and-storage" title="Permalink to this headline">¶</a></h2>
+<p>Obsidian has a function <code class="xref py py-mod docutils literal notranslate"><span class="pre">obsidian.import_cbf</span></code> which will convert files to npy
+format and crop them down to a relevant resolution if the
+following are specified:</p>
+<ul class="simple">
+<li>root directory <em>(required)</em>: folder containing grid scans to be analysed</li>
+<li>destination directory <em>(required)</em>: folder in which to store converted data and
+background files (will be created if not pre-existing)</li>
+<li>background data directory <em>(required)</em>: folder containing blank background scans corresponding to all
+images contained in root.</li>
+<li>beam centre: This must be provided in the order (y, x) or (pixel_row, pixel_column)</li>
+<li>max resolution: maximum resuoltion in Angstroms (reccommended: 7)</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ol class="last arabic simple">
+<li>Normally, obsidian is able to use the beam centre information stored in the image header and does not
+need the information passed explicitely. However, if the user suspects that the actual beam centre
+deviates significantly from the stored value, they will need to determine it by other means and provide
+the values explicitly as in the example below.</li>
+<li>It is reccommended to stick to a max resolution value of 7 Angstrom throughout the usage of obsidian,
+in order to maintain consistency with the training data. Specifying max_res at the import_cbf stage will
+significantly reduce file sizes and processing time.</li>
+</ol>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Make sure destination directory has plenty of disk space (around 30MB per tray)</p>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> module load dials
+<span class="gp">$</span> obsidian.import_cbf --root &lt;/path/to/data/tray2&gt; --dest &lt;big/disk&gt; -b &lt;/path/to/background/data/tray2/g1&gt; -r <span class="m">7</span> -c <span class="s2">&quot;(1321.16, 1249.94)&quot;</span>
+</pre></div>
+</div>
+<p>for images cropped to 7 Angstrom, with beam centre at
+beam_y = 1321.16, beam_x = 1249.94. Note the quotation marks around beam centre tuple.</p>
+<p>You should now have a folder in big/disk corresponding to the root cbf
+directory including all subfolders and a background file.</p>
+<p><strong>All other modules are to be run in python3</strong></p>
+</div>
+<div class="section" id="finding-protein-rings">
+<h2><a class="toc-backref" href="#id6">3. Finding protein rings</a><a class="headerlink" href="#finding-protein-rings" title="Permalink to this headline">¶</a></h2>
+<p>Once .npy files have been created, preprocessing, feature extraction and
+classification can be performed in a single command with use of the <a class="reference internal" href="obsidian.html#module-obsidian.find_rings" title="obsidian.find_rings"><code class="xref py py-mod docutils literal notranslate"><span class="pre">obsidian.find_rings</span></code></a> command.</p>
+<p>If the images have been pre-cropped (as is reccommended):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.find_rings -d big/disk/trayX -t <span class="m">5</span> --display
+</pre></div>
+</div>
+<ul class="simple">
+<li>The data directory containing images to be classified must be provided using -d.</li>
+<li>The top images for each directory will be displayed after classification if the
+option –display is specified.</li>
+<li>The number of highest ranking images to be displayed can be set with the -t option (default: 10).</li>
+</ul>
+<p>Regardless of whether –display is selected, a summary and full results will be saved to the local
+directory in the form of .txt files.</p>
+</div>
+<div class="section" id="training-and-updating-the-obsidian-classifier">
+<h2><a class="toc-backref" href="#id7">4. Training and updating the obsidian classifier</a><a class="headerlink" href="#training-and-updating-the-obsidian-classifier" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="new-data">
+<h3><a class="toc-backref" href="#id8">4.1 New data</a><a class="headerlink" href="#new-data" title="Permalink to this headline">¶</a></h3>
+<p>New data must first be converted and processed, then classified using the <code class="xref py py-mod docutils literal notranslate"><span class="pre">labeller</span></code> module.</p>
+<p>Convert the data to npy format as described in 2.1.</p>
+<p>The directory created by running <code class="docutils literal notranslate"><span class="pre">dials.python</span> <span class="pre">obsidian.import_cbf</span></code> e.g big/disk/tray2
+should be provided to subsequent modules as image data directoy.</p>
+<div class="section" id="processing-data">
+<h4><a class="toc-backref" href="#id9">4.1.1 Processing data</a><a class="headerlink" href="#processing-data" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.process -t &lt;top level directory&gt; -d &lt;destination directory&gt;
+</pre></div>
+</div>
+<p>This will produce xxx_profile.pickle files for each lowest level directoy in big/disk/tray2, corresponding to
+each experiment grid scan.</p>
+</div>
+<div class="section" id="labelling-data">
+<h4><a class="toc-backref" href="#id10">4.1.2 Labelling data</a><a class="headerlink" href="#labelling-data" title="Permalink to this headline">¶</a></h4>
+<p>Use labeller.py as as in the following example:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.labeller
+<span class="go">Enter directory containing files to be labelled: /path/to/image/directory</span>
+<span class="go">Enter destination directory for storing classifications: /my/classes</span>
+<span class="go">Classifying directory /path/to/image/directory...</span>
+<span class="go">All file blank (background)? [y/n, default n]: n</span>
+<span class="go">Enter vmax: 600</span>
+<span class="go">Already cropped? [y/n]: y</span>
+</pre></div>
+</div>
+<p>Vmax refers to the maximum normal pixel value for the images. If entered incorrectly the image contrast
+will be wrong making identification difficult. If a bad value is entered, cancel the program and start again.
+An easy way to determine vmax is to open an image in adxv and check the colour scale on the control panel:</p>
+<div class="figure align-center" id="id1">
+<img alt="_images/vmax.png" src="_images/vmax.png" />
+<p class="caption"><span class="caption-text">For this image, select a vmax of 700</span></p>
+</div>
+<p>You will then be presented with each image in turn and asked to classify it. If ‘y’ entered, the image will
+be given the classification 1 (rings visible). Any other key, or simply pressing enter, will classify the
+image as 0 (no rings).</p>
+<p>In order to proceed to machine learning, you should now have a xxx_classification.pickle file
+corresponding to each xxx_profiles.pickle file.</p>
+</div>
+<div class="section" id="combining-data-and-labels">
+<h4><a class="toc-backref" href="#id11">4.1.3 Combining data and labels</a><a class="headerlink" href="#combining-data-and-labels" title="Permalink to this headline">¶</a></h4>
+<p>Obsidian has a method for creating a database that can be used to update or train a model.</p>
+<p>Imagine you have the following files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>some_folder
+  └──classes
+      ├── xxx_classifications.pickle
+      └── yyy_classifications.pickle
+
+some_other_folder
+  └──datadump
+      ├── xxx_profiles.pickle
+      └── yyy_profiles.pickle
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">These files don’t necessarily have to be in separate folders. However, every available ‘profiles’ file will
+be included, so make sure any unwanted data are removed from ‘datadump’.</p>
+</div>
+<p>To build a database and save to a filename of choice (new_database.pickle in the example) do the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">obsidian.utils.data_handling</span> <span class="kn">import</span> <span class="n">new_database</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">classes_path</span> <span class="o">=</span> <span class="s1">&#39;path/to/some_folder/classes&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;path/to/some_other_folder/datadump&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">database</span> <span class="o">=</span> <span class="n">make_frame</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="n">classes_path</span><span class="p">,</span> <span class="n">save_path</span><span class="o">=</span><span class="s1">&#39;new_database.pickle&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The above code will build a database out of all available data in ‘datadump’ and save it to the <em>current</em>
+directory as ‘new_database.pickle’. To save database to a different directory, specify a full or relative
+path for ‘save_path’.</p>
+</div>
+</div>
+<div class="section" id="preexisting-data-using-obsidian-convnet">
+<h3><a class="toc-backref" href="#id12">4.2 Preexisting data: Using obsidian.convnet</a><a class="headerlink" href="#preexisting-data-using-obsidian-convnet" title="Permalink to this headline">¶</a></h3>
+<p>Once the data has been processed, specifiy its location with the –data option. The argument specified
+after –data could be either a single file or directory containing multiple database files.
+In the latter case, the user will be asked to specify a database from a list of all relevant files found.
+Obsidian only recognises files that fit the pattern ‘*database.pickle’.</p>
+<p>If no –data argument is specified, obsidian will default to the original Lysozyme dataset.</p>
+<div class="section" id="updating-an-existing-model">
+<h4><a class="toc-backref" href="#id13">4.2.1 Updating an existing model</a><a class="headerlink" href="#updating-an-existing-model" title="Permalink to this headline">¶</a></h4>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">While updating an existing model is possible, it’s unknown whether this is a good idea.
+First try testing the model in question on the new data to assess its performance.
+It’s unadvisable to update a model on a small amount of data. If necessary, select a small
+number (&lt;10) of epochs for this.</p>
+</div>
+<p>Obsidian comes with 3 pretrained models, trained on the original lysozyme dataset:</p>
+<ul class="simple">
+<li>high_sensitivity_model</li>
+<li>high_specificity_model</li>
+<li>standard_model</li>
+</ul>
+<p>(see <a class="reference internal" href="#obsidian-classification-models">Obsidian classification models</a> for more details)</p>
+<p>To update any of these modules (or a custom model previously trained and saved) with a new set of
+training data, use convnet with the following options:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.convnet --mode update --name &lt;model name&gt; --data path/to/database  -e &lt;number of epochs&gt;
+</pre></div>
+</div>
+<p>The result will be an updated model trained on the new data, overwriting the preceding file.</p>
+</div>
+<div class="section" id="testing-an-existing-model">
+<h4><a class="toc-backref" href="#id14">4.2.2 Testing an existing model</a><a class="headerlink" href="#testing-an-existing-model" title="Permalink to this headline">¶</a></h4>
+<p>To test a model on a chosen dataset, use <code class="xref py py-mod docutils literal notranslate"><span class="pre">obsidian.convnet</span></code> in saved mode:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.convnet --mode saved --name &lt;model name&gt; --data &lt;data to <span class="nb">test</span> on&gt;
+</pre></div>
+</div>
+</div>
+<div class="section" id="training-a-brand-new-model">
+<h4><a class="toc-backref" href="#id15">4.2.3 Training a brand new model</a><a class="headerlink" href="#training-a-brand-new-model" title="Permalink to this headline">¶</a></h4>
+<p>To build, train and save new models use the <code class="xref py py-mod docutils literal notranslate"><span class="pre">learn.convnet</span></code> module. New models will be saved in
+obsidian/learn and can be used later on, just be sure to name them carefully!</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$</span> obsidian.convnet --name &lt;model name&gt;
+</pre></div>
+</div>
+<p>The following options are available:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="31%" />
+<col width="26%" />
+<col width="31%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Function</th>
+<th class="head">Default</th>
+<th class="head">Example usage</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>–name</td>
+<td>name of model</td>
+<td>classifier_model</td>
+<td>–name my_new_model</td>
+</tr>
+<tr class="row-odd"><td>–data</td>
+<td>location of training data</td>
+<td><em>obsidian original database</em></td>
+<td>–data path/to/my_database.pickle</td>
+</tr>
+<tr class="row-even"><td>–custom_loss</td>
+<td>if specified, use weighted
+binary crossentropy loss
+function</td>
+<td><em>no custom loss, use</em>
+<em>binary_crossentropy</em></td>
+<td>–custom_loss</td>
+</tr>
+<tr class="row-odd"><td>-w</td>
+<td>weight to use for weighted
+binary crossentropy loss
+function</td>
+<td>0.5</td>
+<td>-w 0.8</td>
+</tr>
+<tr class="row-even"><td>-e</td>
+<td>number of training epochs</td>
+<td>30</td>
+<td>-e 15</td>
+</tr>
+<tr class="row-odd"><td>-b</td>
+<td>batch size
+(note: a smaller batch
+size will increase training
+time.</td>
+<td>20</td>
+<td>-b 10</td>
+</tr>
+<tr class="row-even"><td>-n</td>
+<td>number of <a class="reference external" href="https://keras.io/layers/convolutional/#conv1d">convolution
+layers</a></td>
+<td>6</td>
+<td>-n 3</td>
+</tr>
+<tr class="row-odd"><td>-p</td>
+<td>padding</td>
+<td>same</td>
+<td>-p valid</td>
+</tr>
+<tr class="row-even"><td>-o</td>
+<td>amount of dropout</td>
+<td>0.3</td>
+<td>-o 0.5</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note on loss weight:</em>
+A value higher than 1 will bias the model towards positive predictions (high false positive rate, low
+false negative rate), a value lower than 1 will bias the model towards negative predictions
+(high false negative rate, low false positive rate).</p>
+<p>For more information on the above options see the
+<a class="reference external" href="https://keras.io/layers/convolutional/#conv1d">Keras documentation</a> or the documentation
+for <code class="xref py py-mod docutils literal notranslate"><span class="pre">learn.convnet</span></code>.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">How To Use Obsidian - A Tutorial and Cheat Sheet</a><ul>
+<li><a class="reference internal" href="#overview">1. Overview</a><ul>
+<li><a class="reference internal" href="#obsidian-classification-models">Obsidian classification models</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#data-conversion-and-storage">2. Data conversion and storage</a></li>
+<li><a class="reference internal" href="#finding-protein-rings">3. Finding protein rings</a></li>
+<li><a class="reference internal" href="#training-and-updating-the-obsidian-classifier">4. Training and updating the obsidian classifier</a><ul>
+<li><a class="reference internal" href="#new-data">4.1 New data</a><ul>
+<li><a class="reference internal" href="#processing-data">4.1.1 Processing data</a></li>
+<li><a class="reference internal" href="#labelling-data">4.1.2 Labelling data</a></li>
+<li><a class="reference internal" href="#combining-data-and-labels">4.1.3 Combining data and labels</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#preexisting-data-using-obsidian-convnet">4.2 Preexisting data: Using obsidian.convnet</a><ul>
+<li><a class="reference internal" href="#updating-an-existing-model">4.2.1 Updating an existing model</a></li>
+<li><a class="reference internal" href="#testing-an-existing-model">4.2.2 Testing an existing model</a></li>
+<li><a class="reference internal" href="#training-a-brand-new-model">4.2.3 Training a brand new model</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Tutorial</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="obsidian.html"
+                        title="next chapter">obsidian package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tutorial.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="obsidian.html" title="obsidian package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Tutorial"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Obsidian 0.0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Fiona Young.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.4.
+    </div>
+  </body>
+</html>

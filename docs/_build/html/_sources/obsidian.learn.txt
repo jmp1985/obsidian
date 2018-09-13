@@ -1,0 +1,30 @@
+obsidian.learn package
+======================
+
+Submodules
+----------
+
+obsidian.learn.convnet module
+-----------------------------
+
+.. automodule:: obsidian.learn.convnet
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.learn.metrics module
+-----------------------------
+
+.. automodule:: obsidian.learn.metrics
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: obsidian.learn
+    :members:
+    :undoc-members:
+    :show-inheritance:

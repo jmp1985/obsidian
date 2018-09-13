@@ -1,0 +1,54 @@
+obsidian.utils package
+======================
+
+Submodules
+----------
+
+obsidian.utils.bg_files module
+------------------------------
+
+.. automodule:: obsidian.utils.bg_files
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.utils.bg_from_blanks module
+------------------------------------
+
+.. automodule:: obsidian.utils.bg_from_blanks
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.utils.cbf_to_np module
+-------------------------------
+
+.. automodule:: obsidian.utils.cbf_to_np
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.utils.data_handling module
+-----------------------------------
+
+.. automodule:: obsidian.utils.data_handling
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.utils.imgdisp module
+-----------------------------
+
+.. automodule:: obsidian.utils.imgdisp
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: obsidian.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:

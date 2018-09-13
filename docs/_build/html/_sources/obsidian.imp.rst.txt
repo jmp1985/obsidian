@@ -1,0 +1,38 @@
+obsidian.imp package
+====================
+
+Submodules
+----------
+
+obsidian.imp.imp\_main module
+-----------------------------
+
+.. automodule:: obsidian.imp.imp_main
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.imp.processor module
+-----------------------------
+
+.. automodule:: obsidian.imp.processor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+obsidian.imp.sbtr\_bg module
+----------------------------
+
+.. automodule:: obsidian.imp.sbtr_bg
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: obsidian.imp
+    :members:
+    :undoc-members:
+    :show-inheritance:
