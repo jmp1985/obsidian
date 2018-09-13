@@ -17,7 +17,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.utils import shuffle
 # Obsidian modules
 from obsidian.utils.imgdisp import ImgDisp
-from obsidian.utils.data_handling import pickle_get, pickle_put
+from obsidian.utils.data_handling import pickle_get, pickle_put, new_database
 from obsidian.learn.metrics import precision, weighted_binary_crossentropy
 
 # Directories for saving and loading models and databases
@@ -29,11 +29,10 @@ class ProteinClassifier():
   Class for specifying, building, training and testing diffraction image classifiers
 
   :ivar data_table: database of all available images with image path, extracted data and class
-  :ivar profiles: list of profiles
-  :ivar classes: list of class labels
+  :ivar train_data:
+  :ivar test_data:
   :ivar model: Keras model object
-  :ivar indexed_data: (shuffled)
-  :ivar history: created when model trained
+  :ivar history: epoch-wise training history, created when model trained
   :ivar split: number of data samples to be used for training (split fraction is 0.8)
   
   **Default parameters:**
@@ -43,63 +42,40 @@ class ProteinClassifier():
     | padding:          same
     | number of epochs: 30
     | batch size:       20
+    | loss weight:      0.5
   '''
 
   def __init__(self):
     '''When a ProteinClassifier object is instantiated, 
-    data_table, model and indexed_data are set to None to 
+    data_table, model and history are set to None to 
     ensure that methods are called in the appropriate order.
     '''
     self.data_table = None
     self.model = None
-    self.indexed_data = None
     self.history = None
   
   @staticmethod
-  def make_database(IDs=None, name=''):
+  def make_database(data_folder, labels_folder, name=''):
     '''Load data and classes out of relevant folders and store in a data frame along with
-    file path for each image
-    :param list IDs: load only specified datasets into database. If unspecified all available
-                     data will be loaded.
+    file path for each image.
+
     :param str name: Database title. Database will be saved as "namedatabase.pickle"
     '''
     global data_dir
- 
-    data_folder = 'obsidian/datadump/with-background/{}_profiles.pickle'
-    label_folder = '/media/Elements/obsidian/classes/small/{}_classifications.pickle'
-    pre, suf = data_folder.split('{}')
-    # Extract all IDs unless specified
-    IDs = [p.replace(pre, '').replace(suf, '') for p in glob(data_folder.format('*'))] if IDs is None else IDs
+    save_path = os.path.join(data_dir, '{}database.pickle'.format(name))
+    database = new_database(data_folder, label_folder, save_path=save_path)
     
-    data = []
-    labels = []
-    paths = []
-    for ID in IDs:
-      d = pickle_get(data_folder.format(ID))
-      try:
-        l = pickle_get(label_folder.format(ID))
-        for file_path in d.keys():
-          paths.append(file_path)
-          data.append(d[file_path])
-          labels.append(l[file_path])
-      except IOError:
-        print("No labels found for {}, skipping".format(ID))
-    database = pd.DataFrame({'Path':paths, 'Data':data, 'Class':labels})
-    
-    pickle.dump(database, open(os.path.join(data_dir, '{}database.pickle'.format(name)), 'wb'))
-
-  def load_table(self, path):
+  def load_database(self, path):
     '''Load data from pre-pickled database and extract separate lists for inputs and classes
 
     :param str path: path of stored data file
     '''
     self.data_table = pickle_get(path)
-    self.profiles = list(self.data_table['Data'])
-    self.classes = list(self.data_table['Class'])
-    assert len(self.profiles) == len(self.classes)
 
-  def massage(self):
+  def massage(self, split_val=0.8):
     '''Massage data into shape, prepare for model fitting, populate member variables
+
+    :param float split_val: fraction of data to use for training, the remainder used for testing
     '''
     assert self.data_table is not None, "Load data fist!" 
 
@@ -110,21 +86,23 @@ class ProteinClassifier():
     self.data_table = shuffle(self.data_table)
     
     # Split into train and test sets
-    split_val = 0.8
     self.split = int(round(split_val*len(self.data_table)))
 
     self.train_data = self.data_table[:self.split]
     self.test_data = self.data_table[self.split:]
     
     # Extract training and test inputs and targets
-    self.X_train, self.y_train = np.stack(self.train_data['Data'].values), np.stack(self.train_data['Class'].values)
-    self.X_test, self.y_test = np.stack(self.test_data['Data'].values), np.stack(self.test_data['Class'].values)
+    if len(self.train_data)!=0:
+      self.X_train, self.y_train = np.stack(self.train_data['Data'].values), np.stack(self.train_data['Class'].values)
+    if len(self.test_data)!=0:
+      self.X_test, self.y_test = np.stack(self.test_data['Data'].values), np.stack(self.test_data['Class'].values)
 
   def print_summary(self):
     '''Print summary of loaded samples and build model.
     '''
     print("Data loaded!")
-    print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.profiles), (np.array(self.classes) == 1).sum()/len(self.classes)))
+    print("Total number of samples: {0}\nBalance: class 1 - {1:.2f}%".format(len(self.data_table), 
+          (np.array(self.classes) == 1).sum()/len(self.classes)))
     print("Network to train:\n", self.model.summary())
     
   def build_model(self, nlayers=6, 
@@ -140,7 +118,10 @@ class ProteinClassifier():
     :param int max_kern_size: largest kernel size (default 100)
     :param float dropout: Dropout rate (default 0.3)
     :param str padding: padding mode for convolution layers (default 'same')
-    :param str loss: loss function to use to determine weight updates
+    :param bool custom_loss: if true, use weighted_binary_crossentropy
+    :param float loss_weight: weighting of custom loss.  A value higher than 1 will bias the 
+                              model towards positive predictions, a value lower than 1 will bias 
+                              the model towards negative predictions.
     :return: created and compiled keras model
     '''
     kernel_sizes = np.linspace(min_kern_size, max_kern_size, nlayers, dtype=int)
@@ -208,7 +189,6 @@ class ProteinClassifier():
     else:
       self.history = history
 
-    global models_dir
     self.model.save(os.path.join(models_dir, '{}.h5'.format(name)))
     pickle_put(os.path.join(models_dir, '{}_history.pickle'.format(name)), self.history)
 
@@ -222,7 +202,7 @@ class ProteinClassifier():
 
     :param str name: name of saved model to be loaded
     '''
-    print("WARNING: expect inaccurate performance readings when testing pre-trained models on seen data")
+    print("WARNING: expect inaccurate performance readings if testing pre-trained models on seen data")
 
     global models_dir
 
@@ -232,11 +212,12 @@ class ProteinClassifier():
     loss_weight = eval(params['loss_weight'])
     try:
       loss = eval(params['loss'])
+      custom_objects = {'precision':precision, 'weighted_loss':loss}
     except NameError:
-      loss = params['loss']
+      custom_objects = {'precision':precision}
 
     self.model = load_model(os.path.join(models_dir, '{}.h5'.format(name)), 
-                            custom_objects={'precision':precision, 'weighted_loss':loss})
+                            custom_objects=custom_objects)
     self.history = pickle_get(os.path.join(models_dir, '{}_history.pickle'.format(name)))
 
     # Plot training history
@@ -400,8 +381,6 @@ def main(argv):
           --remake to rebuild database")
                     
     sys.exit(2)
-  if '-w' in opts and not '--custom_loss' in opts:
-    print("Warning: providing loss weight meaningless if custom loss function not specified")
   for opt, arg in opts:
     if opt=='-n':
       build_kwargs['nlayers'] = int(arg)
@@ -428,23 +407,27 @@ def main(argv):
       build_kwargs['name'] = arg
       name = arg
     elif opt=='--data':
-      data_dir = arg
-      
+      data_dir = arg 
   
   if remake:
     ProteinClassifier.make_database()
-  '''
-  if mode=='update':
-    IDs = input("Enter list of space separated IDs: ").split(' ')
-    ProteinClassifier.make_database(IDs=IDs, name='new_')
-  '''
+
   PC = ProteinClassifier()
-  PC.load_table(os.path.join(data_dir, '{}database.pickle'.format('new_' if mode=='update' else '')))
+
+  avail = glob(os.path.join(data_dir, '*database.pickle'))
+  if os.path.isfile(data_dir):
+    data_path = data_dir
+  elif len(avail) == 1:
+    data_path = avail[0]
+  else:
+    data_path = input("Available databases:\n\t"+"\n\t".join(name for name in avail)+"\nSelect from above: ")
+
+  PC.load_database(data_path)
    
   # Build and train model with default parameters except where 
   # specified otherwise
   if mode=='saved':
-    PC.massage()
+    PC.massage(split_val=0)
     PC.model_from_save(name=name)
     PC.test_model()
     PC.show_wrongs()
@@ -453,11 +436,18 @@ def main(argv):
     PC.train_model(update=True, **train_kwargs)
     PC.test_model()
   else:
-    PC.build_model(**build_kwargs)
-    PC.train_model(**train_kwargs)
-    PC.test_model()
-    #PC.show_wrongs()
-  
+    go_ahead = True
+    if os.path.isfile(os.path.join(models_dir, '{}.h5'.format(name))):
+       go_ahead = (input("'{}' is an existing model. \
+       Press 'y' to overwrite, any other key to cancel. ".format(name)) == 'y')
+    if go_ahead:
+      PC.build_model(**build_kwargs)
+      PC.train_model(**train_kwargs)
+      PC.test_model()
+      #PC.show_wrongs()
+    else:
+      sys.exit(2)
+      
   plt.show()
   
 

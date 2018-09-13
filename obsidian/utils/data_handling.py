@@ -96,3 +96,41 @@ def read_header(f, params):
       info[p] = l.split(' ')[2:] # extract all info following parameter keyword
   return info
 
+def update_database(old_database, new_data, save=False):
+  '''Add new data to existing database
+  
+  :param str old_database: path to existing database
+  :param list new_data: paths to new data files
+  '''
+  old = pickle_get(old_database)
+  for path in new_data:
+    new = pickle_get(path)
+    try:
+      old.append(new, ignore_index=True)
+    except TypeError as e:
+      print("Failed to add {}:".format(path), e)
+  if save:
+    pickle.put(old_database, old)
+  return old
+
+def new_database(data_dir, classes_dir, save_path=''):
+  
+  all_data = {}
+  for f in glob(os.path.join(data_dir, '*profiles.pickle')):
+    name = os.path.basename(f)
+    data = pickle_get(f)
+    try:
+      labels = pickle_get(os.path.join(classes_dir, name.replace('profiles', 'classifications')))
+    except IOError:
+      print("No classifications found for {}".format(name))
+      continue
+    for key in data:
+      try:
+        data[key].update(labels[key])
+      except KeyError:
+        continue
+    all_data.update(data)
+  df = pd.DataFrame.from_dict(all_data, orient='index')
+  if save_path:
+    pickle_put(save_path, df)
+  return df

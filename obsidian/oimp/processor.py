@@ -11,8 +11,8 @@ class Processor():
   '''Encapsulation of all image processing, to produce data that can be 
   passed onto the feature extraction stage of Obsidian.
   
-  :ivar dict collection: images to be processed in form {filepath : image array}
-  :ivar dict processedData: storage dict for processed images
+  :ivar dict processedData: storage dict for processed images / images to be 
+                            processed in form {filepath : image array}
   :ivar array bg: background image data
   '''
   
@@ -26,7 +26,7 @@ class Processor():
   def background(self, bg=None):
     '''Remove background from image collection
     
-    :param bg: to be removed (provide only if not specified on instantiation)
+    :param bg: Background image to be removed (provide only if not specified on instantiation)
     :returns: modified files
     '''
     assert self.bg is not None or bg is not None, "No background image provided"
@@ -49,7 +49,7 @@ class Processor():
       self.bg[self.bg > value] = -1
 
   def dump_save(self, ID, path=None):
-    '''Save processed images to pickle file
+    '''Save processzed images to pickle file
 
     :param str ID: identification label
     :param str path: destination path (if None, default is obsidian/datadump)
@@ -60,7 +60,7 @@ class Processor():
       os.makedirs(default)
 
     path = os.path.join(default if path is None else path, 
-                        "{}_proscessed.pickle".format(ID))
+                        "{}_processed.pickle".format(ID))
   
     data_save = open(path, "wb")
     pickle.dump(self.processedData, data_save, protocol=-1)

@@ -18,23 +18,18 @@ from obsidian.fex.trace import Trace
 from obsidian.fex.extractor import FeatureExtractor as Fex, radius_from_res
 from obsidian.oimp.processor import Processor
 
-def fname(f):
-  '''
-  :param f: string, filepath
-  '''
-  return os.path.splitext(os.path.basename(f))[0]
-
 def get_img_dirs(root):
-  '''
-  Walk through root directory compiling a list of all bottom level directories (that is directories that contain only
-  files and no subdirectories)
+  '''Walk through root directory compiling a list of all bottom level directories
+  (that is directories that contain only files and no subdirectories)
+
+  :param str root: directory to walk through
+  :returns: dictionary of image data directories with generated IDs based local directory tree
   '''
   bottom_dirs = {}
   for dirname, subdirList, fileList in os.walk(root, topdown=False):
     if len(subdirList)==0:
       ID = ''.join(dirname.split(os.sep)[-3:])
-      tray = ''.join(dirname.split(os.sep)[-4:-2])
-      bottom_dirs[dirname] = {'ID':ID, 'tray':tray}
+      bottom_dirs[dirname] = ID
       
   return bottom_dirs
 
@@ -57,32 +52,31 @@ def locate_background_file(img_data_dir):
       current_path = next_path
 
 def pipe(top, dump_path, max_res):
-  '''
-  This version takes a single top level directory as input and processes all nested files.
-  IDs are derived from directory paths. Background files are created if not already existing
-  '''
-  ##################
-  #   directories  #
-  ##################
-  
-  last = ''
+  '''Takes a single top level directory as input and processes all nested files.
+  IDs are derived from directory paths. Background files are searched for in a bottom-up manner.
 
+  :param str top: Top level directory containing all image files (which may be in several subdirectories)
+  :param str dump_path: Directory to dump processed data into
+  '''
+ 
+  last = ''
+  
+  # Find all relevant image directories within top
   bottom_dirs = get_img_dirs(top)
-  #bg_from_scan(top, dump_path, ('f1', 'g1'))
+
+  # Process each image directory in turn
   for img_data_dir in bottom_dirs.keys():
-  ############################
-  # read in background data  #
-  ############################
-     
+    
     assert os.path.exists(img_data_dir), "{} not found".format(img_data_dir)
-    ID = bottom_dirs[img_data_dir]['ID']
-    tray = bottom_dirs[img_data_dir]['tray']
+    ID = bottom_dirs[img_data_dir]
     print("\n###### Working on {}... ######".format(ID))  
     
+    # Skip directory if already processed
     if os.path.exists(os.path.join(dump_path, '{}_profiles.pickle'.format(ID))):
       print("\t{} already processed, skipping".format(ID))
       continue
 
+    # Background file
     print("\tLooking for background data for {}...".format(img_data_dir))
 
     background_path = locate_background_file(img_data_dir)
@@ -96,26 +90,31 @@ def pipe(top, dump_path, max_res):
     print("\tBackground data loaded from: {}".format(background_path))
 
     # Batch data processing to avoid memory issues
-    batched_files = split_data( glob(img_data_dir+'/*.npy'), 400 ) # batch size of 150
+    batched_files = split_data( glob(img_data_dir+'/*.npy'), 400 ) # batch size of 400
 
     batchIDs = ['{}-{}'.format(ID, i) for i in range(len(batched_files))]
     i = 0
 
+    # Extract max radius in pixels from image header
     header = os.path.join(img_data_dir, 'header.txt')
     rmax = radius_from_res(max_res, header) if max_res is not None else None
+
+    # Open keys file to link each image with unique original image path
+    with open(os.path.join(img_data_dir, 'keys.txt')) as k:
+      keys = {line.split()[0] : line.split()[1] for line in k}
 
     for files in batched_files: 
       
       batchID = batchIDs[i]
       print('\tBatch nr: ', i)
       
-      ############## read in data files ###############
+      ############## Read in data files ###############
       
       print("\t\tLoading image data...") 
 
       data = {f : np.load(f) for f in files if 'background' not in f}
       
-      ############   processing   ############
+      ############   Processing   ############
       
       print("\t\tPre-prossessing images...")
       
@@ -125,29 +124,34 @@ def pipe(top, dump_path, max_res):
       process.background()
       data = process.processedData
 
-      ##############  feature analysis  ##############
+      ##############  Feature analysis  ##############
       
       print("\t\tExtracting profiles...")
 
       fex = Fex(data)
-      fex.mean_traces(rmax=rmax, nangles=20)
+      mean_traces = fex.mean_traces(rmax=rmax, nangles=20)
 
-      ############# saving ##############
+      ############# Saving ##############
+
+      # Create an indexed dictionary with the keys derived from keys.txt
+      indexed_data = {keys[path] : {'Path' : path, 'Data' : mean_traces[path]} for path in mean_traces }
       
       print("\t\tSaving profiles to {}/{}_profiles.pickle...".format(dump_path, batchID))
-      fex.dump_save(batchID, dump_path)
+      pickle_put(os.path.join(dump_path, '{}_profiles.pickle'.format(batchID)), indexed_data), 
+      #fex.dump_save(batchID, dump_path)
       
       del data
       del fex
       del process
       i += 1
 
-    ############# join batches #############
+    ############# Join batches to single file #############
 
     paths = [os.path.join(dump_path, '{}_profiles.pickle'.format(batchID)) for batchID in batchIDs]
-    join_files(os.path.join(dump_path, '{}_profiles.pickle'.format(ID)), paths)
     last = os.path.join(dump_path, '{}_profiles.pickle'.format(ID))
+    join_files(last, paths)
   
+  # Return path of last processed file
   return last
 
 def run(argv):

@@ -56,8 +56,7 @@ def bg_from_scan(top, dest, folders):
 
   :param str top: top level directory containing image folders
   :param str dest: destination for background file
-  :param collection folders: list or tuple of folder strings to demarcate background scans 
-  (e.g. ('g1', 'f1') )
+  :param collection folders: list or tuple of folder strings to demarcate background scans (e.g. ('g1', 'f1') )
   '''
   bottoms = {}
   

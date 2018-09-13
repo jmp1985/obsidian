@@ -167,6 +167,8 @@ class Cbf2Np():
     else:  
       data = image.get_raw_data().as_numpy_array()
     np.save(npy_filepath, data, allow_pickle=False)
+    
+    return npy_filepath
      
   def read_data_directory(self):
     '''Read directory and parse each file into a numpy array, save
@@ -180,20 +182,23 @@ class Cbf2Np():
       npy_filedir = self.get_npy_filedir(directory)
       with open(os.path.join(npy_filedir, 'keys.txt'), 'w') as keys:
         for cbf_file in self.all_dirs[directory]:
-          if os.path.splitext(cbf_file)[1] == '.cbf':
+          if os.path.splitext(cbf_file)[1] == '.cbf' and cbf_file != 'a3_50_grid_1_0009.cbf':
             cbf_filepath = os.path.join(directory, cbf_file)
-            self.cbf_to_npfile(cbf_filepath, npy_filedir, header=header)
-            keys.write(self.get_image_key(cbf_filepath)+'\n')
+            # Extract image data
+            npy_filepath = self.cbf_to_npfile(cbf_filepath, npy_filedir, header=header)
+            # Extract and write image key ('File_path' in header)
+            keys.write(self.get_image_key(cbf_filepath, npy_filepath)+'\n')
             header = False # Extract header for first file only
           i+=1
           progress(i, tot)
 
-  def get_image_key(self, cbf_filepath):
+  def get_image_key(self, cbf_filepath, npy_filepath):
+    cbf_filedir, cbf_filename = os.path.split(cbf_filepath)
     key = 'Image_path'
     head = FormatCBF.get_cbf_header(cbf_filepath)
-    stuff = read_header(head, [key], file_string=True)
-    ans = stuff['Image_path'][0]
-    return '{} {}'.format(cbf_filepath, ans)
+    value = read_header(head, [key], file_string=True)
+    ans = os.path.join(value['Image_path'][0], cbf_filename)
+    return '{} {}'.format(npy_filepath, ans)
 
   def extract_header(self, cbf_filepath, npy_dir, bg=False):
     '''Assume all headers (mostly) the same for a directory of image files (i.e directory

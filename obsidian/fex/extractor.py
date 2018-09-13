@@ -68,10 +68,6 @@ class FeatureExtractor():
     :param int rmax: radius in pixels of data to be extracted, corresponding to the relevant resolution
     :param int nangles: number of lines to average over: the higher the more representative the extracted profile data
     :return: list of mean profile vectors extracted from image collection 
-
-    .. note::
-
-      meanTraces() is computationally expensive. Select a low nangles value for testing purposes
     '''      
     if rmax is None:
       print(("Warning: rmax either not specified or exeeded image dimensions. \
