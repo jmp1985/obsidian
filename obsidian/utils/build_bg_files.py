@@ -14,7 +14,6 @@ def bg_from_blanks(top, dest):
   :param str dest: destination for background file
   '''
   
-  #top = '/media/Elements/obsidian/diffraction_data/180726_small'
   bottoms = {}
   for folder, subdirs, files in os.walk(top):
     if len(subdirs)==0:
@@ -49,7 +48,6 @@ def bg_from_blanks(top, dest):
         mean_bg_data = np.mean(np.dstack((mean1, mean2)), axis=2)
     
       np.save(os.path.join(dest, '{}_background.npy'.format(ID)), mean_bg_data, allow_pickle=False)
-
 
 def bg_from_scan(top, dest, folders):
   '''Seek out background scan directories and build background files

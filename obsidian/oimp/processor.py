@@ -36,6 +36,9 @@ class Processor():
     for name, f in self.processedData.items():
       assert (f.shape == bg.shape), "Background subtraction: images must be equal size!"
       self.processedData[name] = (np.subtract(f, bg))
+
+    if self.bg is None:
+      self.bg = bg
   
   def rm_artifacts(self, value=600):
     '''Null pixel values above a reasonable photon count

@@ -157,7 +157,8 @@ class Cbf2Np():
 
     :param str cbf_filedir: cbf file directory to base destination directory off
     '''
-    npy_filedir = os.path.join(self.dest, os.path.relpath(cbf_filedir, self.root)) 
+    rel = os.path.relpath(cbf_filedir, self.root)
+    npy_filedir = os.path.join(self.dest, '' if rel=='.' else rel) 
     
     # Create destination directory
     if not os.path.isdir(npy_filedir):
@@ -212,7 +213,7 @@ class Cbf2Np():
       # Open file for writing image keys
       with open(os.path.join(npy_filedir, 'keys.txt'), 'w') as keys:
         for cbf_file in self.all_dirs[directory]:
-          if os.path.splitext(cbf_file)[1] == '.cbf' and cbf_file != 'a3_50_grid_1_0009.cbf':
+          if os.path.splitext(cbf_file)[1] == '.cbf':
             cbf_filepath = os.path.join(directory, cbf_file)
             # Extract image data
             npy_filepath = self.cbf_to_npfile(cbf_filepath, npy_filedir, header=header)
@@ -304,7 +305,7 @@ def main(argv):
       print(help_message)
       sys.exit()
     elif opt=='--root':
-      data_root = arg
+      data_root = os.path.abspath(arg)
     elif opt=='--dest':
       data_dest = arg
     elif opt=='-c':

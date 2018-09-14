@@ -3,7 +3,6 @@ For extracting and handling intensity profiles.
 '''
 
 import math
-from scipy.ndimage import map_coordinates
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
@@ -13,6 +12,7 @@ class Trace():
 
   :ivar int w: image width in pixels
   :ivar int h: image height in pixels
+  :ivar tuple cent: Beam centre (either provided or assumed to be image centre)
   :ivar float rmax: maximum radius in pixels 
   :ivar list lines: array of line coordinates along which image values will be extracted
   '''

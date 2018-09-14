@@ -1,6 +1,3 @@
-'''
-Tool for displaying a set of images side by side
-'''
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,10 +28,9 @@ class ImgDisp():
                   math.ceil(self.nimages/(int(math.sqrt(self.nimages)))))
 
   def disp(self):
-    '''
-    Display image collection together with background image if specified
+    '''Display image collection together with background image if specified
 
-    :returns: fig, axes
+    :returns: fig, axes objects
     '''
     fig, axes = plt.subplots(self.shape[0], self.shape[1])
     fig.dpi=300

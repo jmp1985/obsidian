@@ -49,7 +49,7 @@ def split_data(data_list, chunk_size):
 def make_frame(datadict):
   '''Create dataframe out of paths contained in datadict
 
-  :param dict datadict: dict in with entries Type:pathlist with Type e.g 'Class', 'Data'
+  :param dict datadict: dict in with entries 'Data':pathlist with Type e.g 'Class', 'Data'
   '''
 
   data = {}  
@@ -67,11 +67,9 @@ def read_header(f, params):
 
   Example::
 
-    read_header(<header/file/path>, ['Beam_xy', 'Detector_distance'])
-  
-  returns::
-    
+    >>> read_header(<header/file/path>, ['Beam_xy', 'Detector_distance'])
     {'Beam_xy' : ['(1251.51,', '1320.12)', 'pixels'], 'Detector_distance':['0.49906','m']}
+  
   '''
   head = open(f, 'r')
   info = {}
@@ -100,6 +98,13 @@ def update_database(old_database, new_data, save=False):
   return old
 
 def new_database(data_dir, classes_dir, save_path=''):
+  '''Build a pandas dataframe, pickle and save from a list of profiles
+  and labels files
+
+  :param str data_dir: directory containing \*profiles.pickle files
+  :param str classes_dir: directory containing \*classifications.pickle files
+  :param str save_path: if specified, resulting database will be saved to save_path
+  '''
   
   all_data = {}
   for f in glob(os.path.join(data_dir, '*profiles.pickle')):

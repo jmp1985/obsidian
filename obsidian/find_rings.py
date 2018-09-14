@@ -84,7 +84,6 @@ def one_by_one(model, data_directory, dump, max_res, find_kwargs):
   for folder in get_img_dirs(data_directory):
     #print("\nProcessing {}...".format(folder))
     datablock = pipe(folder, dump, max_res)
-    print(bool(datablock))
     if datablock: # Unsuccessfull processing will return empty opject
       find_rings(model, make_frame({'Data':[datablock]}), name=datablock, **find_kwargs)
       os.remove(datablock)
@@ -123,16 +122,18 @@ def main(argv):
   find_kwargs = {}
   model_name = 'standard_model'
   delete = False
+  max_res = None
 
   help_message = 'find_rings\
     -h (display this message)\
     -d <data directory> (required)\
     -t <n top images to show>\
+    -r <maximum resolution>\
     --display (display top n images graphically)\
     --model_name <name of specific model to use for classification>\
     --delete (process data folders one by one and delete intermediate files)'
   try:
-    opts, args = getopt.getopt(argv, 'd:t:h', ['display', 'model_name=', 'delete'])
+    opts, args = getopt.getopt(argv, 'd:t:hr:', ['display', 'model_name=', 'delete'])
   except getopt.GetoptError as e:
     print(e)
     print(help_message)
@@ -142,7 +143,7 @@ def main(argv):
       print(help_message)
       sys.exit()
     elif opt=='-d':
-      data_directory = arg
+      data_directory = os.path.abspath(arg)
     elif opt=='-t':
       find_kwargs['show_top'] = int(arg)
     elif opt=='--display':
@@ -151,6 +152,8 @@ def main(argv):
       model_name = arg
     elif opt=='--delete':
       delete = True
+    elif opt=='-r':
+      max_res = arg
       
   dump = 'datadump'
   if not os.path.exists(dump):
@@ -190,8 +193,6 @@ def main(argv):
   
   ############# Process Data #############
 
-  max_res = 7 # Angstrom
-  
   if delete:
     one_by_one(model, data_directory, dump, max_res, find_kwargs)
   else:
