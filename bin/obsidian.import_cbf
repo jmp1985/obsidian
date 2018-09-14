@@ -4,10 +4,7 @@ obsidian_path=$(dirname $(python3 -c "import obsidian; print(obsidian.__file__)"
 
 import_cbf=${obsidian_path}/utils/import_cbf.py
 
-shift
-
 dials.python $import_cbf "$@"
-
 
 #from obsidian.utils import import_cbf
 #import sys

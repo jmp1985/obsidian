@@ -46,30 +46,16 @@ def split_data(data_list, chunk_size):
   '''
   return [data_list[i:i+chunk_size] for i in range(0, len(data_list), chunk_size)]
 
-def make_frame(datadict, classified=False):
+def make_frame(datadict):
   '''Create dataframe out of paths contained in datadict
 
   :param dict datadict: dict in with entries Type:pathlist with Type e.g 'Class', 'Data'
-  :param bool classified: if True, construct frame with Class column
   '''
 
   data = {}  
   for path in datadict['Data']:
     data.update(pickle_get(path))
-  
-  if 'Class' in datadict:  
-    classified = True
-    classes = {}
-    for path in datadict['Class']:
-      classes.update(pickle_get(path))
-
-  if classified:
-    df = pd.DataFrame([[key, data[key], classes[key]] for key in data.keys()], 
-                    columns =['Path', 'Data', 'Class'])
-  else: 
-    df = pd.DataFrame([[key, data[key]] for key in data.keys()], 
-                    columns=['Path', 'Data'])
-  
+  df = pd.DataFrame.from_dict(data, orient='index')
   return df
 
 def read_header(f, params):

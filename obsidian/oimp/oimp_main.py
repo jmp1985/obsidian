@@ -58,12 +58,10 @@ def pipe(top, dump_path, max_res):
   :param str top: Top level directory containing all image files (which may be in several subdirectories)
   :param str dump_path: Directory to dump processed data into
   '''
- 
   last = ''
   
   # Find all relevant image directories within top
   bottom_dirs = get_img_dirs(top)
-
   # Process each image directory in turn
   for img_data_dir in bottom_dirs.keys():
     

@@ -1,7 +1,8 @@
 '''
-Import cfb files and save raw data as npy array files. Additionally, specify a directory containing background measurements to be averaged and saved to the npy data directory. After running, specified destination directory should contain:
-  - xxx.npy files in corresponding subdirectories, where xxx is the same as the corresponding cbf file name unless
-    otherwise specified
+Import cfb files and save raw data as npy array files. Additionally, specify a directory containing background measurements to be averaged and saved to the npy data directory. After running, specified destination 
+directory should contain:
+  - xxx.npy files in corresponding subdirectories, where xxx is the same as the corresponding 
+    cbf file name
   - background.npy files containing background data averaged across files in
     specified background directory
   - header.txt file, containing header information from first read data file
@@ -23,8 +24,14 @@ def read_header(f, params, file_string=False):
   :param list params: List of strings, each the name of a parameter found in the header
   :return: dict of param:values where values is a list of all subsequent space separated strings
 
-  Example: read_header(<file>, ['Beam_xy', 'Detector_distance']) will return
-  {'Beam_xy' : ['(1251.51,', '1320.12)', 'pixels'], 'Detector_distance':['0.49906','m']}
+  Example: 
+  
+  .. code-block:: python
+    
+    >>> file_path = 'path/to/header.txt'
+    >>> read_header(file_path, ['Beam_xy', 'Detector_distance'])
+    {'Beam_xy' : ['(1251.51,', '1320.12)', 'pixels'], 'Detector_distance':['0.49906','m']}
+  
   '''
   head = f.splitlines() if file_string else open(f, 'r')
   info = {}
@@ -36,35 +43,42 @@ def read_header(f, params, file_string=False):
   return info
 
 def get_params(header):
+  ''' Implement read_header to extract the parameters Wavelength, Detector_distance and Pixel_size,
+  which are required to calculate resolution per pixel
+
+  :param str header: path to header file
+  :returns: values for wavelength, detector distance and pixel size
+  '''
   fields = ['Wavelength', 'Detector_distance', 'Pixel_size']
   defaults = False
   try:
+    # Read paramater values from header
     info = read_header(header, fields)
   except Exception as e:
     defaults = True
+    # Raise exception which, if handled, will allow code to continue
+    # with default values
     raise e
   if defaults:
     wl = 0.96863
     L = 0.49906
     pixel_size = 172*10**(-6)
   else:
+    # Extract raw parameter values
     wl = float(info['Wavelength'][0])
     L = float(info['Detector_distance'][0])
     pixel_size = float(info['Pixel_size'][0])
   return wl, L, pixel_size
  
 def radius_from_res(max_res, header):
-  '''
-  Calculate radius in pixels of a given maximum resolution. Use to compute rmax for Trace()
+  '''Calculate radius in pixels of a given maximum resolution. Use to compute rmax cropping images
 
-  :param float wl: X-Ray wavelength in Angstrom (e-10 m)
   :param float max_res: Maximum resolution at which user expects to find protein rings, in Angstrom
-  :param float distance: Detector distance in meters
-  :param float pixel_size: Pixel dimensions in meters
+  :param str header: path to header file
   :return: Radius in pixels
   '''
   wl, L, pixel_size = get_params(header)
-  # Convert paramters to m
+  # Convert paramters to meters (pixel_size is already in meters)
   l = wl*10**(-10) # Wavelength
   d = max_res*10**(-10) # Resolution
   
@@ -79,10 +93,13 @@ def progress(n, tot):
   '''
   len = 35
   prog = int(round(len * n/tot))
+  # End
   if prog == len:
     sys.stdout.write("\r[{0}] {1:.1f}%".format("=" * len, 100*n/tot))    
+  # Beginning
   elif prog == 0:
     sys.stdout.write("\r[{0}] {1:.1f}%".format("-" * len, 100*n/tot))    
+  # In between
   else:
     sys.stdout.write("\r[{0}{1}{2}] {3:.1f}%".format("=" * (prog-1), ">", "-" * (len-prog), 100*n/tot))    
     sys.stdout.flush()
@@ -94,7 +111,7 @@ class Cbf2Np():
   def __init__(self, root, destination, box=False, centre=None, max_res=None):
     '''
     :param str root: directory containing subdirectories of files to be converted
-    :param str destination:directory to house new files
+    :param str destination: directory to house new files
     :param bool box: if True, save cropped images up to specified resolution
     :param float max_res: maximum resoltion to crop images to in Angstrom
     :param tuple centre: beam centre in form (beam_y, beam_x) (in pixel coordinates)
@@ -104,6 +121,7 @@ class Cbf2Np():
     self.all_dirs = self.get_dirs() # create dictionary of directory paths and files
     self.box = box
     if box: 
+      assert max_res is not None, "Cannot crop image without maximum resolution value"
       self.centre = centre # in pixel coords, (row, col)
       self.max_res = max_res
 
@@ -115,11 +133,12 @@ class Cbf2Np():
     '''
     rmax = radius_from_res(self.max_res, header)
     if self.centre is None:
+      # If centre tuple not provided manually, extract from header
       info = read_header(header, ['Beam_xy'])
     centre = tuple(reversed(eval(''.join(info['Beam_xy'][:2])))) if self.centre is None else self.centre   
     y, x = centre[0], centre[1]
+
     # Return r0, r1, c0, c1
-    
     return int(round(y-rmax)), int(round(y+rmax)), int(round(x-rmax)), int(round(x+rmax))
   
   def get_dirs(self):
@@ -133,6 +152,11 @@ class Cbf2Np():
     return bottom_dirs
 
   def get_npy_filedir(self, cbf_filedir):
+    '''Generate destination directoy from cbf file directory. Create if not
+    preexisting
+
+    :param str cbf_filedir: cbf file directory to base destination directory off
+    '''
     npy_filedir = os.path.join(self.dest, os.path.relpath(cbf_filedir, self.root)) 
     
     # Create destination directory
@@ -148,12 +172,14 @@ class Cbf2Np():
     :param str cbf_filename: input file path
     :param str npy_filename: output file name (optional, default same as cbf name)
     :param bool header: if True, will also extract header info from cbf file
+    :returns: path of newly created npy file
     '''
-    cbf_filedir, cbf_filename = os.path.split(cbf_filepath)
-   
+    # File and directory names
+    cbf_filedir, cbf_filename = os.path.split(cbf_filepath) 
     npy_filename = cbf_filename.replace('.cbf','.npy')
-    
     npy_filepath = os.path.join(npy_filedir, npy_filename)
+    
+    # Extract header data
     if header:
       self.extract_header(cbf_filepath, npy_filedir)
  
@@ -164,22 +190,26 @@ class Cbf2Np():
       r0, r1, c0, c1 = self.get_box(h)
       # Extract cropped image data
       data = image.get_raw_data().as_numpy_array()[r0:r1, c0:c1]
-    else:  
+    else:
+      # Extract uncropped image data
       data = image.get_raw_data().as_numpy_array()
     np.save(npy_filepath, data, allow_pickle=False)
     
     return npy_filepath
      
   def read_data_directory(self):
-    '''Read directory and parse each file into a numpy array, save
+    '''Read directory and parse each file into a numpy array, save in destination directory
     '''
     for directory in self.all_dirs.keys():
       print("\nWorking through directory {}".format(directory)) 
       header = True
+      # Track progress
       i = 0
       tot = len(self.all_dirs[directory])
       progress(i, tot)
+      # Determine destination directory for current image directory
       npy_filedir = self.get_npy_filedir(directory)
+      # Open file for writing image keys
       with open(os.path.join(npy_filedir, 'keys.txt'), 'w') as keys:
         for cbf_file in self.all_dirs[directory]:
           if os.path.splitext(cbf_file)[1] == '.cbf' and cbf_file != 'a3_50_grid_1_0009.cbf':
@@ -193,6 +223,13 @@ class Cbf2Np():
           progress(i, tot)
 
   def get_image_key(self, cbf_filepath, npy_filepath):
+    '''Keep the original image path from the header of each image as a means of
+    tracing data back to original image data.
+
+    :param str cbf_filepath: cbf image path
+    :param str npy_filepath: new numpy image path
+    :returns: string containing npy path followed by ramdisk path
+    '''
     cbf_filedir, cbf_filename = os.path.split(cbf_filepath)
     key = 'Image_path'
     head = FormatCBF.get_cbf_header(cbf_filepath)
@@ -219,7 +256,7 @@ class Cbf2Np():
     :param str bg_dir: path to background directory
     '''
     print("Importing background data...")
-    # read all files in bg_dir into list of np arrays
+    # Read all files in bg_dir into list of np arrays
     bgData = []
     files = glob.glob(os.path.join(bg_dir,'*.cbf'))
     i = 0
@@ -230,7 +267,8 @@ class Cbf2Np():
       if self.box:
         h = os.path.join(self.dest, "bgheader.txt")
         r0, r1, c0, c1 = self.get_box(h)
-        bgData.append(img.get_raw_data().as_numpy_array()[r0:r1, c0:c1]) # Extract cropped image data
+        # Extract cropped image data
+        bgData.append(img.get_raw_data().as_numpy_array()[r0:r1, c0:c1])
       else: 
         bgData.append(img.get_raw_data().as_numpy_array())
       i += 1
@@ -250,6 +288,7 @@ def main(argv):
   help_message = "cbf_to_npy.py \
                   --root <directory containing cbf files (incl subdirs)> \
                   --dest <directory to store npy files in> \
+                  -h (print this message)\
                   -b <background directory> \
                   -c <beam centre in pixels as tuple '(row, col)'> \
                   -r <maximum resoltion to crop images to, in Angstrom>"
