@@ -10,9 +10,11 @@ directory should contain:
 !! This must be run in dials.python !!
 ======================================
 '''
-
-from dxtbx import load
-from dxtbx.format.FormatCBF import FormatCBF
+try:
+  from dxtbx import load
+  from dxtbx.format.FormatCBF import FormatCBF
+except ImportError:
+  print("Couldn't import dxtbx, sorry :(")
 import numpy as np
 import glob, os, sys, getopt
 import math

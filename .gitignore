@@ -2,5 +2,8 @@
 *.swo
 *.pyc
 data/
-docs/
+*.egg-info
+build
 __pycache__
+_build/
+dist

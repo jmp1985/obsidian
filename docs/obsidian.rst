@@ -11,22 +11,22 @@ Subpackages
     obsidian.oimp
     obsidian.utils
 
-Submodules
-----------
+Modules
+-------
 
-obsidian.find_rings module
---------------------------
+obsidian.find\_rings
+++++++++++++++++++++
 
 .. automodule:: obsidian.find_rings
     :members:
     :undoc-members:
     :show-inheritance:
 
+obsidian.labeller
++++++++++++++++++
 
-Module contents
----------------
-
-.. automodule:: obsidian
+.. automodule:: obsidian.labeller
     :members:
     :undoc-members:
     :show-inheritance:
+
