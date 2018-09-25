@@ -1,10 +1,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage import data 
-from skimage.draw import circle_perimeter_aa
 from random import randint
-from skimage import io as skio
 import math
 
 class ImgDisp():
